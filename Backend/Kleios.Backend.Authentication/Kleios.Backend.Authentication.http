@@ -1,0 +1,6 @@
+@Kleios.Backend.Authentication_HostAddress = http://localhost:5273
+
+GET {{Kleios.Backend.Authentication_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

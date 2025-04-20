@@ -1,0 +1,142 @@
+@page "/register"
+
+@inject IAuthService AuthService
+@inject NavigationManager NavigationManager
+
+<MudContainer MaxWidth="MaxWidth.Small" Class="pa-4">
+    <MudPaper Elevation="3" Class="pa-4">
+        <MudText Typo="Typo.h4" Class="mb-4">Registrazione</MudText>
+
+        @if (!string.IsNullOrEmpty(_errorMessage))
+        {
+            <MudAlert Severity="Severity.Error" Class="mb-4">@_errorMessage</MudAlert>
+        }
+
+        <MudForm @ref="_form" @bind-IsValid="_isFormValid">
+            <MudGrid>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_firstName" Label="Nome" Required="false"
+                                  Class="mb-3" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_lastName" Label="Cognome" Required="false"
+                                  Class="mb-3" />
+                </MudItem>
+            </MudGrid>
+
+            <MudTextField @bind-Value="_username" Label="Nome utente" Required="true" RequiredError="Il nome utente è obbligatorio"
+                          Class="mb-3" />
+
+            <MudTextField @bind-Value="_email" Label="Email" Required="true" RequiredError="L'email è obbligatoria"
+                          InputType="InputType.Email" Validation="@(new EmailAddressAttribute() {ErrorMessage = "Email non valida"})"
+                          Class="mb-3" />
+
+            <MudTextField @bind-Value="_password" Label="Password" Required="true" RequiredError="La password è obbligatoria"
+                          InputType="@_passwordInputType" Adornment="Adornment.End" Class="mb-3"
+                          AdornmentIcon="@_passwordInputIcon" OnAdornmentClick="TogglePasswordVisibility" />
+
+            <MudTextField @bind-Value="_confirmPassword" Label="Conferma Password" Required="true" RequiredError="La conferma password è obbligatoria"
+                          InputType="@_passwordInputType" Adornment="Adornment.End" Class="mb-4"
+                          AdornmentIcon="@_passwordInputIcon" OnAdornmentClick="TogglePasswordVisibility"
+                          Validation="@(new Func<string, IEnumerable<string>>(PasswordsMatch))" />
+
+            <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                       Disabled="@(!_isFormValid || _isProcessing)"
+                       OnClick="ProcessRegistration"
+                       FullWidth="true"
+                       Class="mb-2">
+                @if (_isProcessing)
+                {
+                    <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                    <MudText Class="ms-2">Registrazione in corso</MudText>
+                }
+                else
+                {
+                    <MudText>Registrati</MudText>
+                }
+            </MudButton>
+
+            <MudDivider Class="my-4" />
+
+            <MudText Align="Align.Center">
+                Hai già un account? <MudLink Href="/Account/login">Accedi</MudLink>
+            </MudText>
+        </MudForm>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private string _username = "";
+    private string _email = "";
+    private string _password = "";
+    private string _confirmPassword = "";
+    private string _firstName = "";
+    private string _lastName = "";
+    private bool _isProcessing = false;
+    private bool _isFormValid = false;
+    private string _errorMessage = "";
+    private MudForm? _form;
+
+    private InputType _passwordInputType = InputType.Password;
+    private string _passwordInputIcon = Icons.Material.Filled.VisibilityOff;
+
+    private void TogglePasswordVisibility()
+    {
+        if (_passwordInputType == InputType.Password)
+        {
+            _passwordInputType = InputType.Text;
+            _passwordInputIcon = Icons.Material.Filled.Visibility;
+        }
+        else
+        {
+            _passwordInputType = InputType.Password;
+            _passwordInputIcon = Icons.Material.Filled.VisibilityOff;
+        }
+    }
+
+    private IEnumerable<string> PasswordsMatch(string confirmPassword)
+    {
+        if (!string.Equals(_password, confirmPassword))
+            yield return "Le password non corrispondono";
+    }
+
+    private async Task ProcessRegistration()
+    {
+        if (_form == null || !_isFormValid) return;
+
+        _isProcessing = true;
+        _errorMessage = "";
+
+        try
+        {
+            var request = new RegisterRequest
+                {
+                    Username = _username,
+                    Email = _email,
+                    Password = _password,
+                    FirstName = _firstName,
+                    LastName = _lastName
+                };
+
+            var result = await AuthService.RegisterAsync(request);
+
+            if (result.IsSuccess)
+            {
+                // Reindirizza alla homepage dopo la registrazione
+                NavigationManager.NavigateTo("/");
+            }
+            else
+            {
+                _errorMessage = result.Message ?? "Si è verificato un errore durante la registrazione.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Errore: {ex.Message}";
+        }
+        finally
+        {
+            _isProcessing = false;
+        }
+    }
+}

@@ -1,0 +1,95 @@
+﻿@using Kleios.Frontend.Shared.Services
+@using Microsoft.AspNetCore.Components.Authorization
+@inherits LayoutComponentBase
+
+@inject IAuthService AuthService
+@inject NavigationManager NavigationManager
+
+<MudThemeProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+<MudPopoverProvider />
+<MudLayout>
+    <AuthorizeView>
+        <NotAuthorized>
+            <MudContainer MaxWidth="MaxWidth.Small" Class="d-flex align-center" Style="height: 100vh;">
+                <div class="d-flex flex-column mud-width-full">
+                    <MudPaper Elevation="25" Class="pa-8" Width="100%" MaxWidth="500px">
+                        @Body
+                    </MudPaper>
+                </div>
+            </MudContainer>
+        </NotAuthorized>
+        <Authorized>
+            <MudAppBar Elevation="1">
+                <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@((e) => DrawerToggle())" />
+                <MudText Typo="Typo.h6" Class="ml-3">Kleios</MudText>
+                <MudSpacer />
+
+                @if (_isAuthenticated)
+                {
+                    <MudMenu Icon="@Icons.Material.Filled.Person" Color="Color.Inherit" direction="Direction.Bottom" offsetY="true">
+                        <MudText Typo="Typo.body1" Class="px-4 py-2">@_username</MudText>
+                        <MudDivider />
+                        <MudMenuItem OnClick="Logout">Logout</MudMenuItem>
+                    </MudMenu>
+                }
+                else
+                {
+                    <MudButton Href="/Account/login" Color="Color.Inherit">Accedi</MudButton>
+                    <MudButton Href="/register" Color="Color.Inherit" Class="ml-2">Registrati</MudButton>
+                }
+            </MudAppBar>
+
+            <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
+                <NavMenu />
+            </MudDrawer>
+
+            <MudMainContent>
+                <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="my-4 pt-4">
+                    @Body
+                </MudContainer>
+            </MudMainContent>
+        </Authorized>
+    </AuthorizeView>
+</MudLayout>
+
+<div id="blazor-error-ui" data-nosnippet>
+    An unhandled error has occurred.
+    <a href="." class="reload">Reload</a>
+    <span class="dismiss">🗙</span>
+</div>
+
+@code {
+    private bool _drawerOpen = true;
+    private bool _isAuthenticated = false;
+    private string _username = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CheckAuthenticationStatus();
+    }
+
+    private async Task CheckAuthenticationStatus()
+    {
+        _isAuthenticated = await AuthService.IsAuthenticatedAsync();
+
+        if (_isAuthenticated)
+        {
+            // Qui puoi recuperare le informazioni dell'utente se necessario
+            // Ad esempio, potresti avere un metodo GetUserInfo nel tuo AuthService
+        }
+    }
+
+    private void DrawerToggle()
+    {
+        _drawerOpen = !_drawerOpen;
+    }
+
+    private async Task Logout()
+    {
+        await AuthService.LogoutAsync();
+        _isAuthenticated = false;
+        NavigationManager.NavigateTo("/");
+    }
+}

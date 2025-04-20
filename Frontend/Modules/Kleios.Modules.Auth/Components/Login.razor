@@ -1,0 +1,126 @@
+@page "/Account/Login"
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Http
+@using Microsoft.AspNetCore.Identity
+@using MudBlazor.StaticInput
+
+
+@inject IAuthService AuthService
+@inject NavigationManager NavigationManager
+@inject IdentityRedirectManager RedirectManager
+
+
+<PageTitle>Log in</PageTitle>
+<MudCard Elevation="0">
+    <MudCardHeader>
+        <MudText Align="Align.Center" Typo="Typo.h2" Class="mb-3">Logisync</MudText>
+        <MudText Align="Align.Center" Typo="Typo.subtitle1" Class="mb-3">Imytech WMS</MudText>
+    </MudCardHeader>
+    <MudCardContent>
+
+        <MudGrid>
+            <MudItem xs="12">
+                @if (!string.IsNullOrEmpty(_errorMessage))
+                {
+                    <MudAlert Severity="Severity.Error" Class="mb-4" Variant="Variant.Filled" Dense="true">@_errorMessage</MudAlert>
+                }
+                <EditForm Model="Input" method="post" OnValidSubmit="ProcessLogin" FormName="login">
+                    <DataAnnotationsValidator />
+                    <MudGrid>
+                        <MudItem xs="12">
+                            <MudStaticTextField For="@(() => Input.Username)" @bind-Value="Input.Username"
+                                                Label="Email" Placeholder="utente di login"
+                                                UserAttributes="@(new Dictionary<string, object?> { { "autocomplete", "true" }, { "aria-required", "true" } })" />
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudStaticTextField For="@(() => Input.Password)" @bind-Value="Input.Password"
+                                                Label="Password" InputType="InputType.Password" Placeholder="password"
+                                                UserAttributes="@(new Dictionary<string, object?> { { "autocomplete", "current-password" }, { "aria-required", "true" } })" />
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudStaticCheckBox For="@(() => Input.RememberMe)" @bind-Value="Input.RememberMe">Resta collegato</MudStaticCheckBox>
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudStaticButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" FormAction="FormAction.Submit">Log In</MudStaticButton>
+                        </MudItem>
+                    </MudGrid>
+                </EditForm>
+            </MudItem>
+        </MudGrid>
+
+    </MudCardContent>
+</MudCard>
+
+
+
+@code {
+
+
+    [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
+
+    [SupplyParameterFromForm]
+    private LoginModel Input { get; set; } = new LoginModel()
+    {
+        Username = "master",
+        Password = "master123"
+    };
+
+    [SupplyParameterFromQuery] private string? ReturnUrl { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (HttpContext.User.Identity?.IsAuthenticated ?? false)
+        {
+            await HttpContext.SignOutAsync(IdentityConstants.ApplicationScheme);
+            NavigationManager.NavigateTo("/", true);
+        }
+
+        if (HttpMethods.IsGet(HttpContext.Request.Method))
+        {
+            // Clear the existing external cookie to ensure a clean login process
+            await HttpContext.SignOutAsync("Cookies");
+        }
+    }
+
+
+
+    private string _errorMessage = "";
+
+
+   
+
+    private async Task ProcessLogin()
+    {
+        // Verifica manuale dei campi obbligatori
+        if (string.IsNullOrWhiteSpace(Input.Username) || string.IsNullOrWhiteSpace(Input.Password))
+        {
+            _errorMessage = "Inserisci nome utente e password";
+            return;
+        }
+
+        _errorMessage = "";
+
+        var result = await AuthService.LoginAsync(Input.Username, Input.Password);
+
+        if (result.IsSuccess)
+        {
+            RedirectManager.RedirectTo(ReturnUrl);
+        }
+        else
+        {
+            _errorMessage = result.Message ?? "Errore sconosciuto durante l'accesso.";
+        }
+    }
+
+    // Classe del modello di login
+    private class LoginModel
+    {
+        [Required(ErrorMessage = "Il nome utente è obbligatorio")]
+        public string Username { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "La password è obbligatoria")]
+        public string Password { get; set; } = string.Empty;
+
+        public bool RememberMe { get; set; }
+    }
+}

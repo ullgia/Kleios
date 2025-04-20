@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<Sdk Name="Aspire.AppHost.Sdk" Version="9.0.0" />
+
+	<PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsAspireHost>true</IsAspireHost>
+    <UserSecretsId>654eb0d9-dcff-4841-93db-9cbb8d46f0c0</UserSecretsId>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.AppHost" Version="9.2.0" />
+    <ProjectReference Include="..\..\Backend\Kleios.Backend.Authentication\Kleios.Backend.Authentication.csproj" />
+    <ProjectReference Include="..\..\Backend\Kleios.Backend.LogsSettings\Kleios.Backend.LogsSettings.csproj" />
+    <ProjectReference Include="..\..\Frontend\Host\Kleios.Host.csproj" />
+    <ProjectReference Include="..\Kleios.ServiceDefaults\Kleios.ServiceDefaults.csproj" IsAspireProjectResource="false" />
+  </ItemGroup>
+
+</Project>
