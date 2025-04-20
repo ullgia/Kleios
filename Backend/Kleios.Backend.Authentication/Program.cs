@@ -6,6 +6,9 @@ using System.Text;
 using Kleios.Database.Extensions;
 using Kleios.Database.Models;
 using Kleios.Security.Authentication;
+using Kleios.Security.Authorization;
+using Kleios.Shared.Authorization;
+using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -51,7 +54,26 @@ builder.Services.AddAuthentication(options =>
 });
 
 // Add Authorization
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    var nestedTypes = typeof(AppPermissions).GetNestedTypes(BindingFlags.Public | BindingFlags.Static);
+
+    foreach (var nestedType in nestedTypes)
+    {
+        // Ottiene tutti i campi costanti di tipo string nella classe
+        var fields = nestedType.GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy)
+            .Where(f => f.IsLiteral && !f.IsInitOnly && f.FieldType == typeof(string));
+
+        foreach (var field in fields)
+        {
+            // Ottiene il valore del campo (il nome della permission)
+            string permission = (string)field.GetValue(null)!;
+
+            options.AddPolicy(permission, policy =>
+                policy.Requirements.Add(new PermissionRequirement(permission)));
+        }
+    }
+});
 
 // Add Controllers
 builder.Services.AddControllers();

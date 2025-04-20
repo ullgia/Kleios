@@ -175,5 +175,29 @@ public class AuthService : IAuthService
     
     // Il metodo NotifyAuthStateChanged non è più necessario perché utilizziamo
     // direttamente UpdateAuthenticationState quando necessario
+
+    /// <summary>
+    /// Recupera la lista di tutti gli utenti registrati
+    /// </summary>
+    /// <returns>Un'opzione contenente la lista degli utenti se l'operazione ha successo</returns>
+    public async Task<Option<List<UserResponse>>> GetUsersAsync()
+    {
+        // Verifica se l'utente è autenticato
+        if (!await IsAuthenticatedAsync())
+        {
+            return Option<List<UserResponse>>.Failure("Utente non autenticato");
+        }
+        
+        try
+        {
+            // Effettua la richiesta al backend
+            var result = await _httpClient.Get<List<UserResponse>>($"{BaseEndpoint}/users");
+            return result;
+        }
+        catch (Exception ex)
+        {
+            return Option<List<UserResponse>>.Failure($"Errore durante il recupero degli utenti: {ex.Message}");
+        }
+    }
 }
 

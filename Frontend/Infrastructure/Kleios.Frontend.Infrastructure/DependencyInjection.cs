@@ -52,6 +52,9 @@ public static class DependencyInjection
         services.AddHttpClient("API")
             .AddHttpMessageHandler<AuthHttpInterceptor>();
 
+        // Registra il servizio di menu
+        services.AddScoped<IMenuService, MenuService>();
+
         // HttpClient standard per le chiamate che non necessitano di autenticazione
         services.AddHttpClient();
 

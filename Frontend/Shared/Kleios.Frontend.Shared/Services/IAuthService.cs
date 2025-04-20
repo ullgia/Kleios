@@ -15,4 +15,10 @@ public interface IAuthService
     Task<bool> IsAuthenticatedAsync();
     Task LogoutAsync();
     Task<bool> CanNavigateToAsync(string path);
+    
+    /// <summary>
+    /// Recupera la lista di tutti gli utenti registrati
+    /// </summary>
+    /// <returns>Un'opzione contenente la lista degli utenti se l'operazione ha successo</returns>
+    Task<Option<List<UserResponse>>> GetUsersAsync();
 }

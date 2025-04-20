@@ -3,6 +3,8 @@ using Kleios.Security.Authentication;
 using Kleios.Shared.Models;
 using Kleios.Shared;
 using Kleios.Backend.Shared;
+using Kleios.Shared.Authorization;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Kleios.Backend.Authentication.Controllers;
 
@@ -45,5 +47,13 @@ public class AuthController : ControllerBase
 
         var option = await _authService.RefreshTokenAsync(request.RefreshToken);
         return option;
+    }
+
+    [HttpGet("users")]
+    [Authorize(Policy = AppPermissions.Users.View)]
+    public async Task<Result<List<UserResponse>>> GetUsers()
+    {
+        var users = await _authService.GetUsersAsync();
+        return users;
     }
 }

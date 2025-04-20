@@ -17,3 +17,16 @@ public class AuthResponse
     public List<string> Roles { get; set; } = new List<string>(); // New property for multiple roles
     public DateTime Expiration { get; set; }
 }
+
+/// <summary>
+/// Modello per la risposta contenente informazioni su un utente
+/// </summary>
+public class UserResponse
+{
+    public Guid Id { get; set; }
+    public required string Username { get; set; }
+    public required string Email { get; set; }
+    public List<string> Roles { get; set; } = new List<string>();
+    public DateTime CreatedAt { get; set; }
+    public bool IsActive { get; set; }
+}

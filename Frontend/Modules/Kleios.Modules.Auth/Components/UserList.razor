@@ -1,0 +1,110 @@
+@page "/Account/Users"
+@using Kleios.Shared.Authorization
+@attribute [Authorize(Policy = AppPermissions.Users.View)]
+@inject IAuthService AuthService
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+
+<PageTitle>Gestione Utenti</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="my-4">
+    <MudCard Elevation="3">
+        <MudCardHeader>
+            <MudText Typo="Typo.h4">Gestione Utenti</MudText>
+        </MudCardHeader>
+        <MudCardContent>
+            @if (_loading)
+            {
+                <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-4" />
+            }
+            else if (_error != null)
+            {
+                <MudAlert Severity="Severity.Error" Class="my-4">@_error</MudAlert>
+            }
+            else
+            {
+                <MudTable Items="@_users" Hover="true" Breakpoint="Breakpoint.Sm" Loading="@_loading" 
+                          LoadingProgressColor="Color.Info">
+                    <HeaderContent>
+                        <MudTh>Username</MudTh>
+                        <MudTh>Email</MudTh>
+                        <MudTh>Ruoli</MudTh>
+                        <MudTh>Data Creazione</MudTh>
+                        <MudTh>Stato</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Username">@context.Username</MudTd>
+                        <MudTd DataLabel="Email">@context.Email</MudTd>
+                        <MudTd DataLabel="Ruoli">
+                            @foreach (var role in context.Roles)
+                            {
+                                <MudChip T="string" Color="GetRoleColor(role)" Size="Size.Small" Class="mr-1">@role</MudChip>
+                            }
+                        </MudTd>
+                        <MudTd DataLabel="Data Creazione">@context.CreatedAt.ToString("dd/MM/yyyy HH:mm")</MudTd>
+                        <MudTd DataLabel="Stato">
+                            <MudChip T="string" Color="@(context.IsActive ? Color.Success : Color.Error)" Size="Size.Small">
+                                @(context.IsActive ? "Attivo" : "Bloccato")
+                            </MudChip>
+                        </MudTd>
+                    </RowTemplate>
+                    <PagerContent>
+                        <MudTablePager />
+                    </PagerContent>
+                </MudTable>
+            }
+        </MudCardContent>
+    </MudCard>
+</MudContainer>
+
+@code {
+    private List<UserResponse> _users = new();
+    private bool _loading = true;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUsers();
+    }
+
+    private async Task LoadUsers()
+    {
+        try
+        {
+            _loading = true;
+            _error = null;
+            
+            var result = await AuthService.GetUsersAsync();
+            
+            if (result.IsSuccess)
+            {
+                _users = result.Value;
+            }
+            else
+            {
+                _error = result.Message ?? "Errore durante il caricamento degli utenti";
+                Snackbar.Add(_error, Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = $"Si è verificato un errore: {ex.Message}";
+            Snackbar.Add(_error, Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private Color GetRoleColor(string role)
+    {
+        return role switch
+        {
+            "Admin" => Color.Error,
+            "Manager" => Color.Warning,
+            "Utente" => Color.Info,
+            _ => Color.Default
+        };
+    }
+}

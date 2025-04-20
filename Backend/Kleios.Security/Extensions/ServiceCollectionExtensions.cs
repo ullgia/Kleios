@@ -1,6 +1,7 @@
 using Kleios.Database.Models;
 using Kleios.Security.Authentication;
 using Kleios.Security.Authorization;
+using Kleios.Shared.Authorization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -8,6 +9,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using System.Reflection;
 
 namespace Kleios.Security.Extensions;
 
@@ -70,34 +72,23 @@ public static class ServiceCollectionExtensions
         // Configura l'autorizzazione
         services.AddAuthorization(options =>
         {
-            // Aggiunge le policy basate su ruoli
-            options.AddPolicy(KleiosPolicies.AdminOnly, policy => 
-                policy.Requirements.Add(new RoleRequirement("Admin")));
-                
-            options.AddPolicy(KleiosPolicies.UserOrAdmin, policy => 
-                policy.Requirements.Add(new RoleRequirement("Admin", "User")));
-                
-            // Aggiunge policy basate sui permessi
-            // Per i logs
-            options.AddPolicy(KleiosPermissions.ViewLogs, policy => 
-                policy.Requirements.Add(new PermissionRequirement(KleiosPermissions.ViewLogs)));
-                
-            options.AddPolicy(KleiosPermissions.ManageLogs, policy => 
-                policy.Requirements.Add(new PermissionRequirement(KleiosPermissions.ManageLogs)));
-                
-            // Per gli utenti
-            options.AddPolicy(KleiosPermissions.ViewUsers, policy => 
-                policy.Requirements.Add(new PermissionRequirement(KleiosPermissions.ViewUsers)));
-                
-            options.AddPolicy(KleiosPermissions.ManageUsers, policy => 
-                policy.Requirements.Add(new PermissionRequirement(KleiosPermissions.ManageUsers)));
-                
-            // Per le impostazioni
-            options.AddPolicy(KleiosPermissions.ViewSettings, policy => 
-                policy.Requirements.Add(new PermissionRequirement(KleiosPermissions.ViewSettings)));
-                
-            options.AddPolicy(KleiosPermissions.ManageSettings, policy => 
-                policy.Requirements.Add(new PermissionRequirement(KleiosPermissions.ManageSettings)));
+            var nestedTypes = typeof(AppPermissions).GetNestedTypes(BindingFlags.Public | BindingFlags.Static);
+
+            foreach (var nestedType in nestedTypes)
+            {
+                // Ottiene tutti i campi costanti di tipo string nella classe
+                var fields = nestedType.GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy)
+                    .Where(f => f.IsLiteral && !f.IsInitOnly && f.FieldType == typeof(string));
+
+                foreach (var field in fields)
+                {
+                    // Ottiene il valore del campo (il nome della permission)
+                    string permission = (string)field.GetValue(null)!;
+
+                    options.AddPolicy(permission, policy =>
+                        policy.Requirements.Add(new PermissionRequirement(permission)));
+                }
+            }
         });
         
         // Registra gli handler di autorizzazione
@@ -106,4 +97,6 @@ public static class ServiceCollectionExtensions
         
         return services;
     }
+
+ 
 }

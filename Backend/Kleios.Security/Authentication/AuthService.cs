@@ -20,6 +20,7 @@ public interface IAuthService
     Task<Option<AuthResponse>> RegisterAsync(RegisterRequest request);
     Task<Option<AuthResponse>> LoginAsync(LoginRequest request);
     Task<Option<AuthResponse>> RefreshTokenAsync(string refreshToken);
+    Task<Option<List<UserResponse>>> GetUsersAsync();
 }
 
 /// <summary>
@@ -289,5 +290,40 @@ public class AuthService : IAuthService
         );
 
         return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+
+    /// <summary>
+    /// Recupera la lista di tutti gli utenti registrati
+    /// </summary>
+    public async Task<Option<List<UserResponse>>> GetUsersAsync()
+    {
+        try
+        {
+            // Recupera tutti gli utenti dal database
+            var users = await _userManager.Users.ToListAsync();
+            var userResponses = new List<UserResponse>();
+            
+            foreach (var user in users)
+            {
+                // Recupera i ruoli dell'utente
+                var roles = await _userManager.GetRolesAsync(user);
+                
+                userResponses.Add(new UserResponse
+                {
+                    Id = user.Id,
+                    Username = user.UserName ?? string.Empty,
+                    Email = user.Email ?? string.Empty,
+                    Roles = roles.ToList(),
+                    CreatedAt = user.CreatedAt,
+                    IsActive = user.LockoutEnd == null || user.LockoutEnd < DateTimeOffset.UtcNow
+                });
+            }
+            
+            return Option<List<UserResponse>>.Success(userResponses);
+        }
+        catch (Exception ex)
+        {
+            return Option<List<UserResponse>>.ServerError($"Errore durante il recupero degli utenti: {ex.Message}");
+        }
     }
 }
