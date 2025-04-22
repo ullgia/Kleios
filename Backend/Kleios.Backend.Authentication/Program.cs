@@ -7,7 +7,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 builder.AddServiceDefaults();
-
+builder.Services.AddDatabaseSeeder();
 builder.Services.AddKleiosSecurity(builder.Configuration);
 
 // Add Controllers

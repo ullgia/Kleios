@@ -1,7 +1,10 @@
 @page "/System/Users"
 @using Kleios.Shared
 @using Kleios.Shared.Authorization
+@using Kleios.Frontend.Shared.Services
+@using Kleios.Shared.Models
 @attribute [Authorize(Policy = AppPermissions.Users.View)]
+@inject IUserManagementService UserManagementService
 @inject IAuthService AuthService
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
@@ -68,18 +71,33 @@
         await LoadUsers();
     }
 
-    private Task LoadUsers()
+    private async Task LoadUsers()
     {
         try
         {
             _loading = true;
             _error = null;
 
-            var result = Option<List<UserResponse>>.Success(new List<UserResponse>());
+            // Utilizzo IUserManagementService per richiedere gli utenti al backend
+            var filter = new UserFilter
+            {
+                Page = 1,
+                PageSize = 100 // Imposta una dimensione adeguata
+            };
+            
+            var result = await UserManagementService.GetUsersAsync(filter);
 
             if (result.IsSuccess)
             {
-                _users = result.Value;
+                _users = result.Value.Select(u => new UserResponse
+                {
+                    Id = u.Id,
+                    Username = u.Username,
+                    Email = u.Email,
+                    Roles = u.Roles,
+                    CreatedAt = u.CreatedAt,
+                    IsActive = u.UpdatedAt != null // Assumiamo che sia attivo se è stato aggiornato
+                }).ToList();
             }
             else
             {
@@ -96,8 +114,6 @@
         {
             _loading = false;
         }
-
-        return Task.CompletedTask;
     }
 
     private Color GetRoleColor(string role)

@@ -109,7 +109,7 @@ public class AuthService : IAuthService
             return Option<ClaimsPrincipal>.ServerError("no access token");
         }
 
-        var response = await _httpClient.Get<AuthResponse>($"{BaseEndpoint}/refresh-token", refreshToken);
+        var response = await _httpClient.PostAsJson<AuthResponse>($"{BaseEndpoint}/refresh", refreshToken);
         if (response.IsSuccess)
         {
             // Salva i nuovi token
@@ -123,13 +123,15 @@ public class AuthService : IAuthService
     }
 
 
+
+
     private Option<ClaimsPrincipal> GetClaimsPrincipal(string accessToken)
     {
         var handler = new JwtSecurityTokenHandler();
         var token = handler.ReadJwtToken(accessToken);
         var claims = token.Claims.ToList();
         // Aggiungi il claim di autenticazione
-        claims.Add(new Claim(ClaimTypes.Name, token.Subject));
+        claims.Add(new Claim(ClaimTypes.NameIdentifier, token.Subject));
         return new ClaimsPrincipal(new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme));
     }
 }

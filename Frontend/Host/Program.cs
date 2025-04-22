@@ -1,5 +1,4 @@
 using Kleios.Frontend.Infrastructure;
-using Kleios.Frontend.Infrastructure.Handlers;
 using Kleios.Frontend.Infrastructure.Services;
 using Kleios.Frontend.Shared.Services;
 using Kleios.Host.Components;
@@ -125,7 +124,7 @@ builder.Services.AddInfrastructureServices();
 // Configura HttpClient per utilizzare l'interceptor globale
 builder.Services.AddHttpClient("API", client => {
     client.BaseAddress = new Uri(builder.Configuration["ApiBaseUrl"] ?? "https://localhost:5001");
-}).AddHttpMessageHandler<AuthHttpInterceptor>();
+});
 
 // Configura l'HttpClient di default
 builder.Services.AddHttpClient();

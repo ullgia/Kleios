@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using System.Reflection;
+using Kleios.Database.Extensions;
 
 namespace Kleios.Security.Extensions;
 
@@ -23,6 +24,7 @@ public static class ServiceCollectionExtensions
     /// </summary>
     public static IServiceCollection AddKleiosSecurity(this IServiceCollection services, IConfiguration configuration)
     {
+        services.AddKleiosDatabase(useInMemoryDatabase: true);
         // Configura Identity (si assume che AddKleiosDatabase sia stato chiamato in precedenza)
         services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
             {

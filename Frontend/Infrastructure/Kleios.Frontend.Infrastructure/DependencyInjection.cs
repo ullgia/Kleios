@@ -1,5 +1,4 @@
 // filepath: c:\Users\Giacomo\source\Kleios\Frontend\Infrastructure\Kleios.Frontend.Infrastructure\DependencyInjection.cs
-using Kleios.Frontend.Infrastructure.Handlers;
 using Kleios.Frontend.Infrastructure.Services;
 using Kleios.Frontend.Shared.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -20,9 +19,6 @@ public static class DependencyInjection
         // durante tutta la richiesta (funziona anche durante prerendering server)
         services.AddScoped<IdentityRedirectManager>();
 
-        // Registra l'interceptor HTTP
-        services.AddScoped<AuthHttpInterceptor>();
-
         // Registra TokenManager
         services.AddScoped<TokenManager>();
 
@@ -32,26 +28,22 @@ public static class DependencyInjection
             // Usa service discovery schema con preferenza HTTPS 
             // Aspire sostituirà l'URL con l'endpoint corretto del servizio
             client.BaseAddress = new Uri("https+http://auth-service");
-        }).AddHttpMessageHandler<AuthHttpInterceptor>();
+        });
 
         // Configura HttpClient per LogsSettingsService con service discovery di Aspire
         services.AddHttpClient<ILogsSettingsService, LogsSettingsService>(client =>
         {
             // Usa service discovery schema con preferenza HTTPS
             client.BaseAddress = new Uri("https+http://logs-settings-service");
-        }).AddHttpMessageHandler<AuthHttpInterceptor>();
+        });
 
         // Configura HttpClient per UserManagementService con service discovery di Aspire
         services.AddHttpClient<IUserManagementService, UserManagementService>(client =>
         {
             // Usa service discovery schema con preferenza HTTPS
             client.BaseAddress = new Uri("https+http://user-management-service");
-        }).AddHttpMessageHandler<AuthHttpInterceptor>();
-
-        // Configura HttpClient generico per altri servizi che possono ancora utilizzare IHttpService
-        services.AddHttpClient("API")
-            .AddHttpMessageHandler<AuthHttpInterceptor>();
-
+        });
+        
         // Registra il servizio di menu
         services.AddScoped<IMenuService, MenuService>();
 
