@@ -18,13 +18,13 @@ public static class DependencyInjection
     {
         // Registra UserInfoState come servizio scoped per memorizzare le informazioni dell'utente
         // durante tutta la richiesta (funziona anche durante prerendering server)
-        services.AddScoped<UserInfoState>();
         services.AddScoped<IdentityRedirectManager>();
-        services.AddScoped<ILocalStorageService, LocalStorageService>();
-        services.AddScoped<ITokenService, TokenService>();
 
         // Registra l'interceptor HTTP
         services.AddScoped<AuthHttpInterceptor>();
+
+        // Registra TokenManager
+        services.AddScoped<TokenManager>();
 
         // Configura HttpClient per AuthService con service discovery di Aspire
         services.AddHttpClient<IAuthService, AuthService>(client =>

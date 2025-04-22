@@ -62,10 +62,10 @@
 
     [SupplyParameterFromForm]
     private LoginModel Input { get; set; } = new LoginModel()
-    {
-        Username = "master",
-        Password = "master123"
-    };
+        {
+            Username = "master",
+            Password = "master123"
+        };
 
     [SupplyParameterFromQuery] private string? ReturnUrl { get; set; }
 
@@ -73,14 +73,14 @@
     {
         if (HttpContext.User.Identity?.IsAuthenticated ?? false)
         {
-            await HttpContext.SignOutAsync(IdentityConstants.ApplicationScheme);
+            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
             NavigationManager.NavigateTo("/", true);
         }
 
         if (HttpMethods.IsGet(HttpContext.Request.Method))
         {
             // Clear the existing external cookie to ensure a clean login process
-            await HttpContext.SignOutAsync("Cookies");
+            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
         }
     }
 
@@ -89,7 +89,7 @@
     private string _errorMessage = "";
 
 
-   
+
 
     private async Task ProcessLogin()
     {
@@ -108,22 +108,23 @@
         {
             var claims = new List<Claim>
             {
-                new Claim(ClaimTypes.NameIdentifier, result.Value.UserId.ToString())
+                new Claim(ClaimTypes.NameIdentifier, result.Value.UserId.ToString()),
+                new Claim("AspNet.Identity.SecurityStamp", result.Value.SecurityStamp)
             };
 
             var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
             var authProperties = new AuthenticationProperties
-            {
-                IsPersistent = Input.RememberMe,
-                ExpiresUtc = DateTimeOffset.UtcNow.AddDays(30)
-            };
+                {
+                    IsPersistent = Input.RememberMe,
+                    ExpiresUtc = DateTimeOffset.UtcNow.AddDays(30)
+                };
 
             await HttpContext.SignInAsync(
                 CookieAuthenticationDefaults.AuthenticationScheme,
                 new ClaimsPrincipal(claimsIdentity),
                 authProperties);
 
-            RedirectManager.RedirectTo(ReturnUrl); 
+            RedirectManager.RedirectTo(ReturnUrl);
         }
         else
         {

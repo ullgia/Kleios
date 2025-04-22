@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Kleios.Security.Authentication;
 using Kleios.Shared.Models;
@@ -55,5 +56,16 @@ public class AuthController : ControllerBase
     {
         var users = await _authService.GetUsersAsync();
         return users;
+    }
+
+    [HttpGet("security-stamp")]
+    public async Task<Result<string>> GetSecurityStamp()
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId is null)
+        {
+            return Option<string>.ValidationError("Utente non autenticato");
+        }
+        return  await _authService.GetSecurityStampAsync(userId);
     }
 }

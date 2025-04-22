@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <PackageReference Include="MudBlazor" Version="8.5.1" />
+    <PackageReference Include="ZiggyCreatures.FusionCache" Version="2.2.0" />
   </ItemGroup>
 
   <ItemGroup>

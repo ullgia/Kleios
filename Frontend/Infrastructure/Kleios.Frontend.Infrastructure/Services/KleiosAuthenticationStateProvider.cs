@@ -5,118 +5,82 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Options;
+using ZiggyCreatures.Caching.Fusion;
+using Kleios.Shared;
+using Microsoft.AspNetCore.Authentication.Cookies;
 
 namespace Kleios.Frontend.Infrastructure.Services;
 
 /// <summary>
-/// Provider per lo stato di autenticazione che utilizza UserInfoState
-/// per funzionare correttamente anche durante il prerendering server
+/// Provider per lo stato di autenticazione
 /// </summary>
 public class KleiosAuthenticationStateProvider : RevalidatingServerAuthenticationStateProvider
 {
-    private readonly IServiceScopeFactory _scopeFactory;
-    private readonly ITokenService _tokenService;
-    private readonly UserInfoState _userInfoState;
+    private readonly ILogger<KleiosAuthenticationStateProvider> _logger;
+    private readonly IOptions<IdentityOptions> _options;
+    private readonly IAuthService _authService;
+    
+    private static AuthenticationState _anonymousAuthenticationState = new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
+
+    // Stato dell'autenticazione attuale
+    private AuthenticationState _currentAuthenticationState;
 
     public KleiosAuthenticationStateProvider(
         ILoggerFactory loggerFactory,
-        IServiceScopeFactory scopeFactory,
-        ITokenService tokenService,
-        UserInfoState userInfoState) : base(loggerFactory)
+        ILogger<KleiosAuthenticationStateProvider> logger,
+        IOptions<IdentityOptions> options,
+        IAuthService authService)
+        : base(loggerFactory)
     {
-        _scopeFactory = scopeFactory;
-        _tokenService = tokenService;
-        _userInfoState = userInfoState;
+        _logger = logger;
+        _options = options;
+        _authService = authService;
+        
+        _currentAuthenticationState = new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
     }
 
-    /// <summary>
-    /// Ottiene lo stato di autenticazione corrente
-    /// </summary>
-    public override async Task<AuthenticationState> GetAuthenticationStateAsync()
-    {
-        var identity = new ClaimsIdentity();
-        
-        // Se l'utente è già autenticato nello stato scoped, utilizza quelle informazioni
-        if (_userInfoState.IsAuthenticated)
-        {
-            identity = new ClaimsIdentity(_userInfoState.Claims, "jwt");
-        }
-        // Altrimenti verifica se c'è un refresh token valido e prova a ottenere un nuovo access token
-        else if (await _tokenService.HasValidTokenAsync())
-        {
-            // Prima controlla se c'è un access token valido
-            var accessToken = await _tokenService.GetAccessTokenAsync();
-            
-            if (!string.IsNullOrEmpty(accessToken))
-            {
-                try
-                {
-                    // Analizza il token JWT per estrarre le informazioni dell'utente
-                    var tokenHandler = new JwtSecurityTokenHandler();
-                    var jwtToken = tokenHandler.ReadJwtToken(accessToken);
-                    
-                    // Aggiorna lo stato dell'utente con il token e i claim
-                    _userInfoState.UpdateFromToken(accessToken, jwtToken.Claims);
-                    
-                    // Crea l'identità con i claim
-                    identity = new ClaimsIdentity(jwtToken.Claims, "jwt");
-                }
-                catch
-                {
-                    // In caso di errore nell'analisi del token, continua con un'identità vuota
-                }
-            }
-        }
-        
-        return new AuthenticationState(new ClaimsPrincipal(identity));
-    }
+    
+    protected override TimeSpan RevalidationInterval => TimeSpan.FromMinutes(30);
 
-    /// <summary>
-    /// Aggiorna lo stato con un nuovo token JWT
-    /// </summary>
-    public void UpdateAuthenticationState(string accessToken)
+    protected override async Task<bool> ValidateAuthenticationStateAsync(
+        AuthenticationState authenticationState, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrEmpty(accessToken))
-        {
-            _userInfoState.Reset();
-            NotifyAuthenticationStateChanged(Task.FromResult(new AuthenticationState(new ClaimsPrincipal())));
-            return;
-        }
-
         try
         {
-            // Analizza il token JWT
-            var tokenHandler = new JwtSecurityTokenHandler();
-            var jwtToken = tokenHandler.ReadJwtToken(accessToken);
-
-            // Aggiorna lo stato dell'utente
-            _userInfoState.UpdateFromToken(accessToken, jwtToken.Claims);
-
-            // Notifica il cambiamento dello stato di autenticazione
-            var identity = new ClaimsIdentity(jwtToken.Claims, "jwt");
-            var user = new ClaimsPrincipal(identity);
-            NotifyAuthenticationStateChanged(Task.FromResult(new AuthenticationState(user)));
+            // Verifica lo security stamp
+            return await ValidateSecurityStampAsync(authenticationState.User);
         }
-        catch
+        catch (Exception ex)
         {
-            // In caso di errore, resetta lo stato dell'utente
-            _userInfoState.Reset();
-            NotifyAuthenticationStateChanged(Task.FromResult(new AuthenticationState(new ClaimsPrincipal())));
+            _logger.LogError(ex, "Errore durante la validazione dello stato di autenticazione");
+            return false;
         }
     }
 
-    /// <summary>
-    /// Notifica un cambiamento dello stato di autenticazione
-    /// </summary>
-    public void NotifyAuthenticationStateChanged()
+    private async Task<bool> ValidateSecurityStampAsync(ClaimsPrincipal principal)
     {
-        NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
-    }
+        var userId = principal.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId is null)
+        {
+            _logger.LogDebug("Validazione fallita: nessun ID utente trovato");
+            return false;
+        }
 
-    protected override Task<bool> ValidateAuthenticationStateAsync(AuthenticationState authenticationState, CancellationToken cancellationToken)
-    {
-        return Task.FromResult(true);
-    }
+        var securityStampResult = await _authService.GetSecurityStampAsync();
+        if (!securityStampResult.IsSuccess)
+        {
+            _logger.LogDebug("Validazione fallita: security stamp non disponibile");
+            return false;
+        }
 
-    protected override TimeSpan RevalidationInterval { get; } = TimeSpan.FromMinutes(30);
+        var principalStamp = principal.FindFirstValue(_options.Value.ClaimsIdentity.SecurityStampClaimType);
+        var userStamp = securityStampResult.Value;
+        
+        var isValid = string.Equals(principalStamp, userStamp, StringComparison.Ordinal);
+        _logger.LogDebug("Validazione security stamp: {IsValid}", isValid);
+        
+        return isValid;
+    }
 }

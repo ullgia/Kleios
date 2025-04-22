@@ -9,12 +9,26 @@ using MudBlazor.Services;
 using System.Reflection;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using MudBlazor;
+using System.Security.Claims;
+using System.IdentityModel.Tokens.Jwt;
+using Kleios.Shared;
+using ZiggyCreatures.Caching.Fusion;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Identity;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+// Aggiungi FusionCache
+builder.Services.AddFusionCache()
+    .WithDefaultEntryOptions(new FusionCacheEntryOptions
+    {
+        Duration = TimeSpan.FromMinutes(5),
+        JitterMaxDuration = TimeSpan.FromSeconds(2)
+    });
 
 // Aggiungi i servizi di autenticazione
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
@@ -28,6 +42,41 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.LoginPath = "/Account/login";
         options.LogoutPath = "/Account/logout";
         options.AccessDeniedPath = "/access-denied";
+        options.Events.OnValidatePrincipal = async context =>
+        {
+            var userIdClaim = context.Principal?.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim != null)
+            {
+                var userId = userIdClaim.Value;
+
+                var fusionCache = context.HttpContext.RequestServices.GetRequiredService<IFusionCache>();
+                var authService = context.HttpContext.RequestServices.GetRequiredService<IAuthService>();
+
+                var cacheKey = $"User-Authorization-{userId}";
+
+                var principal = await fusionCache.GetOrSetAsync(
+                    cacheKey,
+                    async _ =>
+                    {
+                        var principal = await authService.GetUserClaims();
+
+                        if (principal.IsFailure)
+                        {
+                            context.RejectPrincipal();
+                            await context.HttpContext.SignOutAsync(
+                                CookieAuthenticationDefaults.AuthenticationScheme);
+                            return new ClaimsPrincipal();
+                        }
+
+
+                        return principal.Value;
+                    }, TimeSpan.FromSeconds(30));
+
+                context.ReplacePrincipal(principal);
+                context.ShouldRenew = true;
+
+            }
+        };
     });
 
 // Aggiungi i servizi di autenticazione standard di Blazor

@@ -21,6 +21,7 @@ public interface IAuthService
     Task<Option<AuthResponse>> LoginAsync(LoginRequest request);
     Task<Option<AuthResponse>> RefreshTokenAsync(string refreshToken);
     Task<Option<List<UserResponse>>> GetUsersAsync();
+    Task<Option<string>> GetSecurityStampAsync(string userId);
 }
 
 /// <summary>
@@ -107,7 +108,8 @@ public class AuthService : IAuthService
             Email = user.Email ?? string.Empty,
             Role = userRole.Name ?? "Utente", // For backward compatibility
             Roles = new List<string> { userRole.Name ?? "Utente" }, // Include all roles (just one for new users)
-            Expiration = DateTime.UtcNow.AddMinutes(Convert.ToDouble(_configuration["JWT:ExpiryInMinutes"] ?? "60"))
+            Expiration = DateTime.UtcNow.AddMinutes(Convert.ToDouble(_configuration["JWT:ExpiryInMinutes"] ?? "60")),
+            SecurityStamp = user.SecurityStamp ?? string.Empty
         };
 
         return Option<AuthResponse>.Success(response);
@@ -154,7 +156,8 @@ public class AuthService : IAuthService
             Email = user.Email ?? string.Empty,
             Role = primaryRole, // Set the first role as primary for backward compatibility
             Roles = roles.ToList(), // Include all roles
-            Expiration = DateTime.UtcNow.AddMinutes(Convert.ToDouble(_configuration["JWT:ExpiryInMinutes"] ?? "60"))
+            Expiration = DateTime.UtcNow.AddMinutes(Convert.ToDouble(_configuration["JWT:ExpiryInMinutes"] ?? "60")),
+            SecurityStamp = user.SecurityStamp ?? string.Empty
         };
 
         return Option<AuthResponse>.Success(response);
@@ -206,7 +209,8 @@ public class AuthService : IAuthService
                 Email = storedToken.User.Email ?? string.Empty,
                 Role = (await _userManager.GetRolesAsync(storedToken.User)).FirstOrDefault() ?? "Utente",
                 Roles = (await _userManager.GetRolesAsync(storedToken.User)).ToList(),
-                Expiration = DateTime.UtcNow.AddMinutes(Convert.ToDouble(_configuration["JWT:ExpiryInMinutes"] ?? "60"))
+                Expiration = DateTime.UtcNow.AddMinutes(Convert.ToDouble(_configuration["JWT:ExpiryInMinutes"] ?? "60")),
+                SecurityStamp = storedToken.User.SecurityStamp ?? string.Empty
             };
             
             return Option<AuthResponse>.Success(response);
@@ -325,5 +329,15 @@ public class AuthService : IAuthService
         {
             return Option<List<UserResponse>>.ServerError($"Errore durante il recupero degli utenti: {ex.Message}");
         }
+    }
+
+    public Task<Option<string>> GetSecurityStampAsync(string userId)
+    {
+        var user = _userManager.Users.FirstOrDefault(u => u.Id.ToString() == userId);
+        if (user == null)
+        {
+            return Task.FromResult(Option<string>.ValidationError("Utente non trovato"));
+        }
+        return Task.FromResult(Option<string>.Success(user.SecurityStamp ?? string.Empty));
     }
 }

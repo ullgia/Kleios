@@ -31,7 +31,6 @@
                     <MudMenu Icon="@Icons.Material.Filled.Person" Color="Color.Inherit" direction="Direction.Bottom" offsetY="true">
                         <MudText Typo="Typo.body1" Class="px-4 py-2">@_username</MudText>
                         <MudDivider />
-                        <MudMenuItem OnClick="Logout">Logout</MudMenuItem>
                     </MudMenu>
                 }
                 else
@@ -65,31 +64,12 @@
     private bool _isAuthenticated = false;
     private string _username = "";
 
-    protected override async Task OnInitializedAsync()
-    {
-        await CheckAuthenticationStatus();
-    }
-
-    private async Task CheckAuthenticationStatus()
-    {
-        _isAuthenticated = await AuthService.IsAuthenticatedAsync();
-
-        if (_isAuthenticated)
-        {
-            // Qui puoi recuperare le informazioni dell'utente se necessario
-            // Ad esempio, potresti avere un metodo GetUserInfo nel tuo AuthService
-        }
-    }
+   
 
     private void DrawerToggle()
     {
         _drawerOpen = !_drawerOpen;
     }
 
-    private async Task Logout()
-    {
-        await AuthService.LogoutAsync();
-        _isAuthenticated = false;
-        NavigationManager.NavigateTo("/");
-    }
+
 }

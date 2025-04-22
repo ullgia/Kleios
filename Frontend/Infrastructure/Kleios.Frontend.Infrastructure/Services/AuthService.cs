@@ -1,35 +1,46 @@
 // filepath: c:\Users\Giacomo\source\Kleios\Frontend\Infrastructure\Kleios.Frontend.Infrastructure\Services\AuthService.cs
+
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using Kleios.Frontend.Shared.Services;
 using Kleios.Shared;
 using Kleios.Shared.Models;
 using Kleios.Frontend.Infrastructure.Helpers;
 using Kleios.Frontend.Infrastructure.Models;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.Extensions.Logging;
+using ZiggyCreatures.Caching.Fusion;
+using Microsoft.AspNetCore.Http;
 
 namespace Kleios.Frontend.Infrastructure.Services;
 
 /// <summary>
-/// Implementazione del servizio di autenticazione che utilizza service discovery di Aspire
-/// e UserInfoState per funzionare anche durante prerendering
+/// Implementazione del servizio di autenticazione che utilizza il TokenManager
+/// per la gestione dei token
 /// </summary>
 public class AuthService : IAuthService
 {
     private readonly HttpClient _httpClient;
-    private readonly ITokenService _tokenService;
-    private readonly AuthenticationStateProvider _authStateProvider;
-    private readonly UserInfoState _userInfoState;
+    private readonly ILogger<AuthService> _logger;
+    private readonly IFusionCache _fusionCache;
+    private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly TokenManager _tokenManager;
+    
     private const string BaseEndpoint = "api/auth";
 
     public AuthService(
         HttpClient httpClient,
-        ITokenService tokenService,
-        AuthenticationStateProvider authStateProvider,
-        UserInfoState userInfoState)
+        IFusionCache fusionCache,
+        IHttpContextAccessor httpContextAccessor,
+        TokenManager tokenManager,
+        ILogger<AuthService> logger)
     {
         _httpClient = httpClient;
-        _tokenService = tokenService;
-        _authStateProvider = authStateProvider;
-        _userInfoState = userInfoState;
+        _fusionCache = fusionCache;
+        _httpContextAccessor = httpContextAccessor;
+        _tokenManager = tokenManager;
+        _logger = logger;
     }
 
     /// <summary>
@@ -37,6 +48,14 @@ public class AuthService : IAuthService
     /// </summary>
     public async Task<Option<AuthResponse>> LoginAsync(string username, string password)
     {
+        if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
+        {
+            _logger.LogWarning("Tentativo di login con username o password vuoti");
+            return Option<AuthResponse>.ValidationError("Username e password sono obbligatori");
+        }
+
+        _logger.LogInformation("Tentativo di login per utente: {Username}", username);
+
         var request = new LoginRequest
         {
             Username = username,
@@ -47,14 +66,12 @@ public class AuthService : IAuthService
         
         if (result.IsSuccess)
         {
-            // Salva i token: access token nello UserInfoState e refresh token nel cookie
-            await _tokenService.SetTokensAsync(result.Value.Token, result.Value.RefreshToken);
+            // Utilizza il TokenManager per salvare i token
+            _tokenManager.SetTokens(result.Value.Token, result.Value.RefreshToken);
             
-            // Aggiorna lo stato di autenticazione con il nuovo token
-            if (_authStateProvider is KleiosAuthenticationStateProvider kleiosProvider)
-            {
-                kleiosProvider.UpdateAuthenticationState(result.Value.Token);
-            }
+            // Invalida cache
+            await _fusionCache.RemoveAsync($"User-Claims-{result.Value.UserId}");
+            _logger.LogDebug("Token salvati e cache invalidata");
         }
         
         return result;
@@ -65,139 +82,57 @@ public class AuthService : IAuthService
     /// </summary>
     public async Task<Option<AuthResponse>> RegisterAsync(RegisterRequest request)
     {
-        var result = await _httpClient.PostAsJson<AuthResponse>($"{BaseEndpoint}/register", request);
-        
-        if (result.IsSuccess)
+        if (string.IsNullOrEmpty(request.Username) || string.IsNullOrEmpty(request.Password))
         {
-            // Salva i token: access token nello UserInfoState e refresh token nel cookie
-            await _tokenService.SetTokensAsync(result.Value.Token, result.Value.RefreshToken);
-            
-            // Aggiorna lo stato di autenticazione con il nuovo token
-            if (_authStateProvider is KleiosAuthenticationStateProvider kleiosProvider)
-            {
-                kleiosProvider.UpdateAuthenticationState(result.Value.Token);
-            }
+            _logger.LogWarning("Tentativo di registrazione con dati incompleti");
+            return Option<AuthResponse>.ValidationError("I dati di registrazione sono incompleti");
         }
-        
-        return result;
+
+        _logger.LogInformation("Tentativo di registrazione per utente: {Username}", request.Username);
+
+        return await _httpClient.PostAsJson<AuthResponse>($"{BaseEndpoint}/register", request);
     }
 
-    /// <summary>
-    /// Aggiorna il token di accesso usando il refresh token
-    /// </summary>
-    public async Task<Option<AuthResponse>> RefreshTokenAsync()
+    public async Task<Option<string>> GetSecurityStampAsync()
     {
-        var refreshToken = await _tokenService.GetRefreshTokenAsync();
-        
+        return await _httpClient.Get<string>($"{BaseEndpoint}/security-stamp");
+    }
+
+    public async Task<Option<ClaimsPrincipal>> GetUserClaims()
+    {
+        if (_tokenManager.TryGetAccessToken(out var accessToken))
+        {
+            return GetClaimsPrincipal(accessToken);
+        }
+
+        var refreshToken = _tokenManager.GetRefreshToken();
         if (string.IsNullOrEmpty(refreshToken))
         {
-            return Option<AuthResponse>.Failure("Refresh token non disponibile");
+            return Option<ClaimsPrincipal>.ServerError("no access token");
         }
-        
-        var request = new RefreshTokenRequest { RefreshToken = refreshToken };
-        
-        var result = await _httpClient.PostAsJson<AuthResponse>($"{BaseEndpoint}/refresh", request);
-        
-        if (result.IsSuccess)
+
+        var response = await _httpClient.Get<AuthResponse>($"{BaseEndpoint}/refresh-token", refreshToken);
+        if (response.IsSuccess)
         {
-            // Aggiorna i token
-            await _tokenService.SetTokensAsync(result.Value.Token, result.Value.RefreshToken);
-            
-            // Aggiorna lo stato di autenticazione con il nuovo token
-            if (_authStateProvider is KleiosAuthenticationStateProvider kleiosProvider)
-            {
-                kleiosProvider.UpdateAuthenticationState(result.Value.Token);
-            }
+            // Salva i nuovi token
+            _tokenManager.SetTokens(response.Value.Token, response.Value.RefreshToken);
+            return GetClaimsPrincipal(response.Value.Token);
         }
-        else
-        {
-            // Se c'è un errore, pulisci i token
-            await LogoutAsync();
-        }
-        
-        return result;
+
+        // Se il refresh token non è valido, l'utente deve effettuare il login
+        _logger.LogWarning("Refresh token non valido, l'utente deve effettuare il login");
+        return Option<ClaimsPrincipal>.ServerError("Refresh token non valido");
     }
 
-    /// <summary>
-    /// Verifica se l'utente è autenticato
-    /// </summary>
-    public async Task<bool> IsAuthenticatedAsync()
-    {
-        // Prima controlla nello stato scoped (funziona sempre)
-        if (_userInfoState.IsAuthenticated)
-        {
-            return true;
-        }
-        
-        // Come fallback, controlla i token
-        return await _tokenService.HasValidTokenAsync();
-    }
 
-    /// <summary>
-    /// Effettua il logout dell'utente
-    /// </summary>
-    public async Task LogoutAsync()
+    private Option<ClaimsPrincipal> GetClaimsPrincipal(string accessToken)
     {
-        await _tokenService.RemoveTokensAsync();
-        
-        // Aggiorna lo stato di autenticazione (resetta)
-        if (_authStateProvider is KleiosAuthenticationStateProvider kleiosProvider)
-        {
-            kleiosProvider.UpdateAuthenticationState("");
-        }
-    }
-
-    /// <summary>
-    /// Verifica se l'utente può navigare a un certo percorso
-    /// </summary>
-    public async Task<bool> CanNavigateToAsync(string path)
-    {
-        // Percorsi pubblici che non richiedono autenticazione
-        string[] publicPaths = { "/login", "/register", "/public", "/" };
-        
-        // Se il percorso è pubblico, consenti la navigazione
-        if (publicPaths.Any(p => path.StartsWith(p, StringComparison.OrdinalIgnoreCase)))
-        {
-            return true;
-        }
-        
-        // Per tutti gli altri percorsi, verifica se l'utente è autenticato
-        bool isAuthenticated = await IsAuthenticatedAsync();
-        
-        // Se l'utente non è autenticato, non può navigare
-        if (!isAuthenticated)
-        {
-            return false;
-        }
-        
-        return true;
-    }
-    
-    // Il metodo NotifyAuthStateChanged non è più necessario perché utilizziamo
-    // direttamente UpdateAuthenticationState quando necessario
-
-    /// <summary>
-    /// Recupera la lista di tutti gli utenti registrati
-    /// </summary>
-    /// <returns>Un'opzione contenente la lista degli utenti se l'operazione ha successo</returns>
-    public async Task<Option<List<UserResponse>>> GetUsersAsync()
-    {
-        // Verifica se l'utente è autenticato
-        if (!await IsAuthenticatedAsync())
-        {
-            return Option<List<UserResponse>>.Failure("Utente non autenticato");
-        }
-        
-        try
-        {
-            // Effettua la richiesta al backend
-            var result = await _httpClient.Get<List<UserResponse>>($"{BaseEndpoint}/users");
-            return result;
-        }
-        catch (Exception ex)
-        {
-            return Option<List<UserResponse>>.Failure($"Errore durante il recupero degli utenti: {ex.Message}");
-        }
+        var handler = new JwtSecurityTokenHandler();
+        var token = handler.ReadJwtToken(accessToken);
+        var claims = token.Claims.ToList();
+        // Aggiungi il claim di autenticazione
+        claims.Add(new Claim(ClaimTypes.Name, token.Subject));
+        return new ClaimsPrincipal(new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme));
     }
 }
 

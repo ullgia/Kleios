@@ -16,6 +16,7 @@ public class AuthResponse
     public required string Role { get; set; } // Kept for backward compatibility
     public List<string> Roles { get; set; } = new List<string>(); // New property for multiple roles
     public DateTime Expiration { get; set; }
+    public string SecurityStamp { get; set; } = string.Empty; // Stamp di sicurezza per la validazione del token
 }
 
 /// <summary>
