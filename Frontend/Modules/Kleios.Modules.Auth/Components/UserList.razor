@@ -4,7 +4,6 @@
 @using Kleios.Frontend.Shared.Services
 @using Kleios.Shared.Models
 @attribute [Authorize(Policy = AppPermissions.Users.View)]
-@inject IUserManagementService UserManagementService
 @inject IAuthService AuthService
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
@@ -85,7 +84,7 @@
                 PageSize = 100 // Imposta una dimensione adeguata
             };
             
-            var result = await UserManagementService.GetUsersAsync(filter);
+            var result = await AuthService.GetUsersAsync(filter);
 
             if (result.IsSuccess)
             {

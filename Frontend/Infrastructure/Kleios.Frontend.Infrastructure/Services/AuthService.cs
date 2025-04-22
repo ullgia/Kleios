@@ -26,6 +26,11 @@ public class AuthService : IAuthService
     private readonly TokenManager _tokenManager;
     
     private const string BaseEndpoint = "api/auth";
+    private const string TokenRefreshCacheKey = "TokenRefresh";
+    
+    // Soglia di tolleranza per la scadenza del token in secondi
+    // Se il token scade entro questa soglia, verrà aggiornato preventivamente
+    private const int TokenExpiryThresholdSeconds = 30;
 
     public AuthService(
         HttpClient httpClient,
@@ -39,6 +44,15 @@ public class AuthService : IAuthService
         _httpContextAccessor = httpContextAccessor;
         _tokenManager = tokenManager;
         _logger = logger;
+    }
+
+    /// <summary>
+    /// Ottiene gli utenti in base ai filtri specificati
+    /// </summary>
+    public async Task<Option<IEnumerable<UserDto>>> GetUsersAsync(UserFilter filter)
+    {
+        // Utilizzo diretto del metodo helper con query string
+        return await _httpClient.Get<IEnumerable<UserDto>>(BaseEndpoint, filter);
     }
 
     /// <summary>
@@ -122,8 +136,108 @@ public class AuthService : IAuthService
         return Option<ClaimsPrincipal>.ServerError("Refresh token non valido");
     }
 
+    /// <summary>
+    /// Aggiorna il token di accesso utilizzando un refresh token
+    /// </summary>
+    public async Task<Option<AuthResponse>> RefreshTokenAsync(string refreshToken)
+    {
+        if (string.IsNullOrEmpty(refreshToken))
+        {
+            _logger.LogWarning("Tentativo di refresh token con token vuoto");
+            return Option<AuthResponse>.ValidationError("Il refresh token è obbligatorio");
+        }
 
+        _logger.LogInformation("Tentativo di refresh token");
 
+        // Crea la richiesta di refresh token
+        var request = new RefreshTokenRequest
+        {
+            RefreshToken = refreshToken
+        };
+
+        // Chiamata diretta all'endpoint di refresh
+        var response = await _httpClient.PostAsJson<AuthResponse>($"{BaseEndpoint}/refresh", request);
+        
+        if (response.IsSuccess)
+        {
+            // Salva i nuovi token ottenuti
+            _tokenManager.SetTokens(response.Value.Token, response.Value.RefreshToken);
+            _logger.LogInformation("Refresh token completato con successo");
+            
+            // Invalida eventuali cache correlate
+            if (response.Value.UserId != Guid.Empty)
+            {
+                await _fusionCache.RemoveAsync($"User-Claims-{response.Value.UserId}");
+            }
+        }
+        else
+        {
+            _logger.LogWarning("Refresh token fallito: {Error}", response.Message);
+        }
+        
+        return response;
+    }
+    
+    /// <summary>
+    /// Ottiene un token JWT valido, effettuando il refresh se necessario
+    /// </summary>
+    public async Task<Option<string>> GetValidAccessTokenAsync()
+    {
+        // Verifica se esiste un token che sia ancora valido per un periodo ragionevole
+        if (_tokenManager.TryGetAccessToken(out var accessToken))
+        {
+            // Controlla anche la validità del token - se sta per scadere, fai refresh preventivo
+            if (_tokenManager.GetTokenRemainingLifetimeSeconds() > TokenExpiryThresholdSeconds)
+            {
+                // Il token è ancora valido per un tempo sufficiente
+                return Option<string>.Success(accessToken);
+            }
+            
+            _logger.LogInformation("Token sta per scadere (entro {Seconds} secondi), refresh preventivo", 
+                TokenExpiryThresholdSeconds);
+        }
+
+        // Se non abbiamo un token valido o sta per scadere, tentiamo di fare refresh
+        // Utilizziamo FusionCache per evitare refresh multipli simultanei (protezione anti-stampede)
+        try
+        {
+            var refreshResult = await _fusionCache.GetOrSetAsync(
+                TokenRefreshCacheKey,
+                async _ => {
+                    var refreshToken = _tokenManager.GetRefreshToken();
+                    if (string.IsNullOrEmpty(refreshToken))
+                    {
+                        return false;
+                    }
+                    
+                    var authResponse = await RefreshTokenAsync(refreshToken);
+                    return authResponse.IsSuccess;
+                },
+                options => options
+                    .SetDuration(TimeSpan.FromSeconds(5))  // Breve durata per evitare problemi con token non validi
+                    .SetFailSafe(false),  // Non vogliamo usare valori scaduti
+                default);
+
+            if (refreshResult && _tokenManager.TryGetAccessToken(out var newToken))
+            {
+                return Option<string>.Success(newToken);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Errore durante il refresh del token");
+        }
+        
+        // Se il token non è più valido e il refresh è fallito
+        if (!string.IsNullOrEmpty(accessToken))
+        {
+            // Ritorna comunque il vecchio token (potrebbe ancora funzionare in base alle politiche del server)
+            return Option<string>.Success(accessToken);
+        }
+        
+        // Se non c'è proprio un token
+        return Option<string>.ServerError("Nessun token di autenticazione disponibile");
+    }
 
     private Option<ClaimsPrincipal> GetClaimsPrincipal(string accessToken)
     {

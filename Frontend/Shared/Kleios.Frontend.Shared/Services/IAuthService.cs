@@ -14,4 +14,12 @@ public interface IAuthService
     Task<Option<AuthResponse>> RegisterAsync(RegisterRequest request);
     Task<Option<string>> GetSecurityStampAsync();
     Task<Option<ClaimsPrincipal>> GetUserClaims();
+    Task<Option<IEnumerable<UserDto>>> GetUsersAsync(UserFilter filter);
+    Task<Option<AuthResponse>> RefreshTokenAsync(string refreshToken);
+    
+    /// <summary>
+    /// Ottiene un token JWT valido, effettuando il refresh se necessario
+    /// </summary>
+    /// <returns>Un'Option contenente il token se valido, altrimenti un errore</returns>
+    Task<Option<string>> GetValidAccessTokenAsync();
 }

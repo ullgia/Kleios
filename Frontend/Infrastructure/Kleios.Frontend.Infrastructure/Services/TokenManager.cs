@@ -135,6 +135,23 @@ public class TokenManager
         }
     }
     
+    /// <summary>
+    /// Ottiene il tempo rimanente in secondi prima della scadenza del token
+    /// </summary>
+    public double GetTokenRemainingLifetimeSeconds()
+    {
+        lock (_accessTokenLock)
+        {
+            if (string.IsNullOrEmpty(_accessToken) || _accessTokenExpiry <= DateTime.UtcNow)
+            {
+                return 0;
+            }
+            
+            var remainingTime = _accessTokenExpiry - DateTime.UtcNow;
+            return remainingTime.TotalSeconds;
+        }
+    }
+    
     #region Metodi privati
     
     /// <summary>

@@ -1,7 +1,10 @@
 // filepath: c:\Users\Giacomo\source\Kleios\Frontend\Infrastructure\Kleios.Frontend.Infrastructure\DependencyInjection.cs
 using Kleios.Frontend.Infrastructure.Services;
 using Kleios.Frontend.Shared.Services;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using ZiggyCreatures.Caching.Fusion;
 
 namespace Kleios.Frontend.Infrastructure;
 
@@ -21,8 +24,16 @@ public static class DependencyInjection
 
         // Registra TokenManager
         services.AddScoped<TokenManager>();
+        
+        // Registra AuthenticatedHttpMessageHandler come transient
+        // Nota: ora dipende solo da IAuthService e non direttamente da TokenManager
+        services.AddTransient<AuthenticatedHttpMessageHandler>();
+
+        // Configura HttpClient standard per le chiamate che non necessitano di autenticazione
+        services.AddHttpClient();
 
         // Configura HttpClient per AuthService con service discovery di Aspire
+        // Non usiamo l'handler di autenticazione per evitare dipendenze circolari
         services.AddHttpClient<IAuthService, AuthService>(client =>
         {
             // Usa service discovery schema con preferenza HTTPS 
@@ -30,26 +41,30 @@ public static class DependencyInjection
             client.BaseAddress = new Uri("https+http://auth-service");
         });
 
-        // Configura HttpClient per LogsSettingsService con service discovery di Aspire
-        services.AddHttpClient<ILogsSettingsService, LogsSettingsService>(client =>
-        {
-            // Usa service discovery schema con preferenza HTTPS
-            client.BaseAddress = new Uri("https+http://logs-settings-service");
-        });
+        // Configura HttpClient per LogsSettingsService con service discovery di Aspire e autenticazione
+        ConfigureAuthenticatedHttpClient<ILogsSettingsService, LogsSettingsService>(services, "https+http://logs-settings-service");
 
-        // Configura HttpClient per UserManagementService con service discovery di Aspire
-        services.AddHttpClient<IUserManagementService, UserManagementService>(client =>
-        {
-            // Usa service discovery schema con preferenza HTTPS
-            client.BaseAddress = new Uri("https+http://user-management-service");
-        });
+        // Configura HttpClient per UserManagementService con service discovery di Aspire e autenticazione
+        ConfigureAuthenticatedHttpClient<IUserManagementService, UserManagementService>(services, "https+http://user-management-service");
         
         // Registra il servizio di menu
         services.AddScoped<IMenuService, MenuService>();
 
-        // HttpClient standard per le chiamate che non necessitano di autenticazione
-        services.AddHttpClient();
-
         return services;
+    }
+    
+    /// <summary>
+    /// Configura un HttpClient con autenticazione JWT automatica per un servizio specifico
+    /// </summary>
+    private static IHttpClientBuilder ConfigureAuthenticatedHttpClient<TInterface, TImplementation>(
+        IServiceCollection services, 
+        string baseAddress)
+        where TInterface : class
+        where TImplementation : class, TInterface
+    {
+        return services.AddHttpClient<TInterface, TImplementation>(client =>
+        {
+            client.BaseAddress = new Uri(baseAddress);
+        }).AddHttpMessageHandler<AuthenticatedHttpMessageHandler>();
     }
 }

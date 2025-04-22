@@ -22,14 +22,7 @@ public class UserManagementService : IUserManagementService
         _httpClient = httpClient;
     }
 
-    /// <summary>
-    /// Ottiene gli utenti in base ai filtri specificati
-    /// </summary>
-    public async Task<Option<IEnumerable<UserDto>>> GetUsersAsync(UserFilter filter)
-    {
-        // Utilizzo diretto del metodo helper con query string
-        return await _httpClient.Get<IEnumerable<UserDto>>(UsersEndpoint, filter);
-    }
+ 
 
     /// <summary>
     /// Ottiene un utente specifico per ID

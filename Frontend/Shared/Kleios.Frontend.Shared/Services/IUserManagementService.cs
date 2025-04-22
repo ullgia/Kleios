@@ -9,7 +9,6 @@ namespace Kleios.Frontend.Shared.Services;
 /// </summary>
 public interface IUserManagementService
 {
-    Task<Option<IEnumerable<UserDto>>> GetUsersAsync(UserFilter filter);
     Task<Option<UserDto>> GetUserByIdAsync(Guid id);
     Task<Option<UserDto>> CreateUserAsync(CreateUserRequest request);
     Task<Option<UserDto>> UpdateUserAsync(Guid id, UpdateUserRequest request);
