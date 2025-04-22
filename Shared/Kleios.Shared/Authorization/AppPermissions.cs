@@ -59,4 +59,22 @@ public static class AppPermissions
         [Permission("Gestisci Impostazioni", "Permette di gestire le impostazioni del sistema")]
         public const string Manage = "Settings.Manage";
     }
+    
+    /// <summary>
+    /// Permessi relativi ai ruoli
+    /// </summary>
+    public static class Roles
+    {
+        /// <summary>
+        /// Permesso per visualizzare i ruoli
+        /// </summary>
+        [Permission("Visualizza Ruoli", "Permette di visualizzare i ruoli del sistema")]
+        public const string View = "Roles.View";
+        
+        /// <summary>
+        /// Permesso per gestire i ruoli
+        /// </summary>
+        [Permission("Gestisci Ruoli", "Permette di gestire i ruoli del sistema")]
+        public const string Manage = "Roles.Manage";
+    }
 }

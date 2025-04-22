@@ -1,3 +1,4 @@
+using Kleios.Backend.SystemAdmin.Services;
 using Kleios.Database.Extensions;
 using Kleios.Security.Extensions;
 using Kleios.ServiceDefaults;
@@ -9,13 +10,19 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOpenApi();
 builder.AddServiceDefaults();
 builder.AddKleiosValidation();
-builder.Services.AddDatabaseSeeder();
 builder.Services.AddKleiosSecurity(builder.Configuration);
+
+// Registra i servizi del modulo System
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IRoleService, RoleService>();
+builder.Services.AddScoped<ISettingsService, SettingsService>();
 
 // Add Controllers
 builder.Services.AddControllers();
 
 var app = builder.Build();
+
+app.MapDefaultEndpoints();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -25,9 +32,6 @@ if (app.Environment.IsDevelopment())
 
 // Applica le migrazioni all'avvio dell'applicazione
 app.MigrateKleiosDatabase();
-
-// Esegue il seeding del database
-await app.Services.SeedDatabaseAsync();
 
 app.UseHttpsRedirection();
 

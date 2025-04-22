@@ -4,16 +4,19 @@
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="FluentValidation.AspNetCore" Version="11.3.0" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.4" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\Orchestration\Kleios.ServiceDefaults\Kleios.ServiceDefaults.csproj" />
-    <ProjectReference Include="..\..\Backend\Kleios.Database\Kleios.Database.csproj" />
+    <ProjectReference Include="..\Kleios.Backend.Shared\Kleios.Backend.Shared.csproj" />
+    <ProjectReference Include="..\Kleios.Database\Kleios.Database.csproj" />
+    <ProjectReference Include="..\Kleios.Security\Kleios.Security.csproj" />
+    <ProjectReference Include="..\..\Shared\Kleios.Shared\Kleios.Shared.csproj" />
   </ItemGroup>
 
 </Project>

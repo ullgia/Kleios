@@ -1,13 +1,17 @@
+using FluentValidation;
+using FluentValidation.AspNetCore;
+using Kleios.Shared.Validators;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using OpenTelemetry;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 
-namespace Microsoft.Extensions.Hosting;
+namespace Kleios.ServiceDefaults;
 
 // Adds common .NET Aspire services: service discovery, resilience, health checks, and OpenTelemetry.
 // This project should be referenced by each service project in your solution.
@@ -37,6 +41,18 @@ public static class Extensions
         //     options.AllowedSchemes = ["https"];
         // });
 
+        return builder;
+    }
+
+    /// <summary>
+    /// Aggiunge la validazione FluentValidation al servizio
+    /// </summary>
+    /// <typeparam name="T">Un tipo marker che appartiene all'assembly contenente i validatori</typeparam>
+    public static IHostApplicationBuilder AddKleiosValidation(this IHostApplicationBuilder builder)
+    {
+        builder.Services.AddValidatorsFromAssemblyContaining<IKleiosValidatorsMarker>();
+        builder.Services.AddFluentValidationAutoValidation();
+        
         return builder;
     }
 

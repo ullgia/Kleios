@@ -1,10 +1,7 @@
 // filepath: c:\Users\Giacomo\source\Kleios\Frontend\Infrastructure\Kleios.Frontend.Infrastructure\DependencyInjection.cs
 using Kleios.Frontend.Infrastructure.Services;
 using Kleios.Frontend.Shared.Services;
-using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using ZiggyCreatures.Caching.Fusion;
 
 namespace Kleios.Frontend.Infrastructure;
 

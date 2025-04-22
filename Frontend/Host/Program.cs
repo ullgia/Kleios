@@ -8,6 +8,7 @@ using System.Reflection;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using MudBlazor;
 using System.Security.Claims;
+using Kleios.ServiceDefaults;
 using ZiggyCreatures.Caching.Fusion;
 using Microsoft.AspNetCore.Authentication;
 using Kleios.Shared.Authorization;
