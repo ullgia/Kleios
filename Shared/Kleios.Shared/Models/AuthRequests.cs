@@ -1,5 +1,3 @@
-using System;
-
 namespace Kleios.Shared.Models;
 
 /// <summary>

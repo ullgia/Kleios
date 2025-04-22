@@ -1,6 +1,5 @@
 using Kleios.Shared;
 using Microsoft.AspNetCore.Mvc;
-using System.Text.Json.Serialization;
 
 namespace Kleios.Backend.Shared
 {

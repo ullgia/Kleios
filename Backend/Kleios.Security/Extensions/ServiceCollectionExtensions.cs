@@ -78,15 +78,17 @@ public static class ServiceCollectionExtensions
             {
                 // Ottiene tutti i campi costanti di tipo string nella classe
                 var fields = nestedType.GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy)
-                    .Where(f => f.IsLiteral && !f.IsInitOnly && f.FieldType == typeof(string));
+                    .Where(f => f is { IsLiteral: true, IsInitOnly: false } && f.FieldType == typeof(string));
 
                 foreach (var field in fields)
                 {
-                    // Ottiene il valore del campo (il nome della permission)
-                    string permission = (string)field.GetValue(null)!;
-
-                    options.AddPolicy(permission, policy =>
-                        policy.Requirements.Add(new PermissionRequirement(permission)));
+                    var propertyValue = field.GetValue(null);
+                    if (propertyValue is not null)
+                    {
+                        options.AddPolicy(propertyValue.ToString()!, policy => policy
+                            .RequireAuthenticatedUser()
+                            .RequireClaim(ApplicationClaimTypes.Permission, propertyValue.ToString()!));
+                    }
                 }
             }
         });

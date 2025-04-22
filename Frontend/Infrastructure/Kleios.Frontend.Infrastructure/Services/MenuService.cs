@@ -1,8 +1,4 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Security.Claims;
-using System.Threading.Tasks;
 using Kleios.Frontend.Shared.Models;
 using Kleios.Shared.Authorization;
 using Microsoft.AspNetCore.Components.Authorization;
@@ -41,21 +37,21 @@ public class MenuService : Kleios.Frontend.Shared.Services.IMenuService
                     {
                         Title = "Gestione Utenti",
                         Icon = "fas fa-users",
-                        Href = "/Account/Users",
+                        Href = "/System/Users",
                         Policy = AppPermissions.Users.View
                     },
                     new MenuItem
                     {
                         Title = "Impostazioni",
                         Icon = "fas fa-cog",
-                        Href = "/settings",
+                        Href = "/System/Settings",
                         Policy = AppPermissions.Settings.View
                     },
                     new MenuItem
                     {
                         Title = "Logs di Sistema",
                         Icon = "fas fa-list",
-                        Href = "/logs",
+                        Href = "/System/Logs",
                         Policy = AppPermissions.Logs.View
                     }
                 }

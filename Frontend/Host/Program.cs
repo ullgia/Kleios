@@ -4,17 +4,14 @@ using Kleios.Frontend.Infrastructure.Services;
 using Kleios.Frontend.Shared.Services;
 using Kleios.Host.Components;
 using Microsoft.AspNetCore.Components.Authorization;
-using Microsoft.AspNetCore.Http;
 using MudBlazor.Services;
 using System.Reflection;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using MudBlazor;
 using System.Security.Claims;
-using System.IdentityModel.Tokens.Jwt;
-using Kleios.Shared;
 using ZiggyCreatures.Caching.Fusion;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Identity;
+using Kleios.Shared.Authorization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -80,7 +77,28 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     });
 
 // Aggiungi i servizi di autenticazione standard di Blazor
-builder.Services.AddAuthorizationCore();
+builder.Services.AddAuthorization(options =>
+{
+    var nestedTypes = typeof(AppPermissions).GetNestedTypes(BindingFlags.Public | BindingFlags.Static);
+
+    foreach (var nestedType in nestedTypes)
+    {
+        // Ottiene tutti i campi costanti di tipo string nella classe
+        var fields = nestedType.GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy)
+            .Where(f => f is { IsLiteral: true, IsInitOnly: false } && f.FieldType == typeof(string));
+
+        foreach (var field in fields)
+        {
+            var propertyValue = field.GetValue(null);
+            if (propertyValue is not null)
+            {
+                options.AddPolicy(propertyValue.ToString()!, policy => policy
+                    .RequireAuthenticatedUser()
+                    .RequireClaim(ApplicationClaimTypes.Permission, propertyValue.ToString()!));
+            }
+        }
+    }
+});
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<AuthenticationStateProvider, KleiosAuthenticationStateProvider>();
 

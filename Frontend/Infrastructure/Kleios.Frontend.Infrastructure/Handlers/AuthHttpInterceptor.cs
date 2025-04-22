@@ -1,9 +1,5 @@
 // filepath: c:\Users\Giacomo\source\Kleios\Frontend\Infrastructure\Kleios.Frontend.Infrastructure\Handlers\AuthHttpInterceptor.cs
-using System.Net;
-using System.Net.Http.Headers;
-using Kleios.Frontend.Shared.Services;
-using Microsoft.AspNetCore.Components;
-using Microsoft.Extensions.DependencyInjection;
+
 using Microsoft.Extensions.Logging;
 
 namespace Kleios.Frontend.Infrastructure.Handlers;

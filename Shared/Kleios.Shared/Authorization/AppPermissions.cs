@@ -1,5 +1,3 @@
-using Kleios.Shared.Authorization;
-
 namespace Kleios.Shared.Authorization;
 
 /// <summary>

@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-
 namespace Kleios.Frontend.Shared.Models;
 
 /// <summary>
