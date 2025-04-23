@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.Extensions.Logging;
 using ZiggyCreatures.Caching.Fusion;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Authentication;
 
 namespace Kleios.Frontend.Infrastructure.Services;
 
@@ -79,7 +80,7 @@ public class AuthService : IAuthService
         if (result.IsSuccess)
         {
             // Utilizza il TokenManager per salvare i token
-            _tokenManager.SetTokens(result.Value.Token, result.Value.RefreshToken);
+            await _tokenManager.SetTokensAsync(result.Value.Token, result.Value.RefreshToken, result.Value.UserId);
             
             // Invalida cache
             await _fusionCache.RemoveAsync($"User-Claims-{result.Value.UserId}");
@@ -102,7 +103,16 @@ public class AuthService : IAuthService
 
         _logger.LogInformation("Tentativo di registrazione per utente: {Username}", request.Username);
 
-        return await _httpClient.PostAsJson<AuthResponse>($"{BaseEndpoint}/register", request);
+        var result = await _httpClient.PostAsJson<AuthResponse>($"{BaseEndpoint}/register", request);
+        
+        if (result.IsSuccess)
+        {
+            // Salva i token dopo la registrazione
+            await _tokenManager.SetTokensAsync(result.Value.Token, result.Value.RefreshToken, result.Value.UserId);
+            _logger.LogDebug("Token salvati dopo la registrazione");
+        }
+        
+        return result;
     }
 
     public async Task<Option<string>> GetSecurityStampAsync()
@@ -112,23 +122,40 @@ public class AuthService : IAuthService
 
     public async Task<Option<ClaimsPrincipal>> GetUserClaims()
     {
-        if (_tokenManager.TryGetAccessToken(out var accessToken))
+        // Ottieni l'ID utente corrente dal cookie di autenticazione
+        var userId = GetCurrentUserId();
+        if (userId == Guid.Empty)
         {
-            return GetClaimsPrincipal(accessToken);
+            _logger.LogWarning("Impossibile ottenere l'ID utente corrente");
+            return Option<ClaimsPrincipal>.ServerError("Utente non autenticato");
+        }
+        
+        // Prova a ottenere l'access token
+        var accessTokenOption = await _tokenManager.GetAccessTokenAsync(userId);
+        
+        if (accessTokenOption.IsSuccess)
+        {
+            return _tokenManager.GetClaimsFromToken(accessTokenOption.Value);
         }
 
-        var refreshToken = _tokenManager.GetRefreshToken();
-        if (string.IsNullOrEmpty(refreshToken))
+        // Prova a ottenere il refresh token
+        var refreshTokenOption = await _tokenManager.GetRefreshTokenAsync(userId);
+        if (!refreshTokenOption.IsSuccess)
         {
-            return Option<ClaimsPrincipal>.ServerError("no access token");
+            _logger.LogWarning("Nessun refresh token disponibile per l'utente {UserId}", userId);
+            return Option<ClaimsPrincipal>.ServerError("Nessun token di autenticazione");
         }
 
-        var response = await _httpClient.PostAsJson<AuthResponse>($"{BaseEndpoint}/refresh", refreshToken);
+        // Tenta il refresh
+        var response = await RefreshTokenAsync(refreshTokenOption.Value);
         if (response.IsSuccess)
         {
-            // Salva i nuovi token
-            _tokenManager.SetTokens(response.Value.Token, response.Value.RefreshToken);
-            return GetClaimsPrincipal(response.Value.Token);
+            // Verifica che il TokenManager abbia salvato il nuovo token
+            var newTokenOption = await _tokenManager.GetAccessTokenAsync(userId);
+            if (newTokenOption.IsSuccess)
+            {
+                return _tokenManager.GetClaimsFromToken(newTokenOption.Value);
+            }
         }
 
         // Se il refresh token non è valido, l'utente deve effettuare il login
@@ -161,7 +188,7 @@ public class AuthService : IAuthService
         if (response.IsSuccess)
         {
             // Salva i nuovi token ottenuti
-            _tokenManager.SetTokens(response.Value.Token, response.Value.RefreshToken);
+            await _tokenManager.SetTokensAsync(response.Value.Token, response.Value.RefreshToken, response.Value.UserId);
             _logger.LogInformation("Refresh token completato con successo");
             
             // Invalida eventuali cache correlate
@@ -183,14 +210,25 @@ public class AuthService : IAuthService
     /// </summary>
     public async Task<Option<string>> GetValidAccessTokenAsync()
     {
+        // Ottieni l'ID utente corrente
+        var userId = GetCurrentUserId();
+        if (userId == Guid.Empty)
+        {
+            _logger.LogWarning("Impossibile ottenere l'ID utente corrente per il token");
+            return Option<string>.ServerError("Utente non autenticato");
+        }
+        
         // Verifica se esiste un token che sia ancora valido per un periodo ragionevole
-        if (_tokenManager.TryGetAccessToken(out var accessToken))
+        var accessTokenOption = await _tokenManager.GetAccessTokenAsync(userId);
+        
+        if (accessTokenOption.IsSuccess)
         {
             // Controlla anche la validità del token - se sta per scadere, fai refresh preventivo
-            if (_tokenManager.GetTokenRemainingLifetimeSeconds() > TokenExpiryThresholdSeconds)
+            var remainingLifetime = await _tokenManager.GetTokenRemainingLifetimeSecondsAsync(userId);
+            if (remainingLifetime > TokenExpiryThresholdSeconds)
             {
                 // Il token è ancora valido per un tempo sufficiente
-                return Option<string>.Success(accessToken);
+                return accessTokenOption;
             }
             
             _logger.LogInformation("Token sta per scadere (entro {Seconds} secondi), refresh preventivo", 
@@ -201,16 +239,17 @@ public class AuthService : IAuthService
         // Utilizziamo FusionCache per evitare refresh multipli simultanei (protezione anti-stampede)
         try
         {
+            var cacheKey = $"{TokenRefreshCacheKey}_{userId}";
             var refreshResult = await _fusionCache.GetOrSetAsync(
-                TokenRefreshCacheKey,
+                cacheKey,
                 async _ => {
-                    var refreshToken = _tokenManager.GetRefreshToken();
-                    if (string.IsNullOrEmpty(refreshToken))
+                    var refreshTokenOption = await _tokenManager.GetRefreshTokenAsync(userId);
+                    if (!refreshTokenOption.IsSuccess)
                     {
                         return false;
                     }
                     
-                    var authResponse = await RefreshTokenAsync(refreshToken);
+                    var authResponse = await RefreshTokenAsync(refreshTokenOption.Value);
                     return authResponse.IsSuccess;
                 },
                 options => options
@@ -218,25 +257,55 @@ public class AuthService : IAuthService
                     .SetFailSafe(false),  // Non vogliamo usare valori scaduti
                 default);
 
-            if (refreshResult && _tokenManager.TryGetAccessToken(out var newToken))
+            if (refreshResult)
             {
-                return Option<string>.Success(newToken);
+                var newTokenOption = await _tokenManager.GetAccessTokenAsync(userId);
+                if (newTokenOption.IsSuccess)
+                {
+                    return newTokenOption;
+                }
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Errore durante il refresh del token");
+            _logger.LogError(ex, "Errore durante il refresh del token per l'utente {UserId}", userId);
         }
         
         // Se il token non è più valido e il refresh è fallito
-        if (!string.IsNullOrEmpty(accessToken))
+        if (accessTokenOption.IsSuccess)
         {
             // Ritorna comunque il vecchio token (potrebbe ancora funzionare in base alle politiche del server)
-            return Option<string>.Success(accessToken);
+            return accessTokenOption;
         }
         
         // Se non c'è proprio un token
         return Option<string>.ServerError("Nessun token di autenticazione disponibile");
+    }
+
+    /// <summary>
+    /// Esegue il logout dell'utente
+    /// </summary>
+    public async Task LogoutAsync()
+    {
+        var userId = GetCurrentUserId();
+        if (userId != Guid.Empty)
+        {
+            // Cancella i token
+            await _tokenManager.ClearTokensAsync(userId);
+            
+            // Invalida cache correlate
+            await _fusionCache.RemoveAsync($"User-Claims-{userId}");
+            await _fusionCache.RemoveAsync($"{TokenRefreshCacheKey}_{userId}");
+            
+            _logger.LogInformation("Logout completato per l'utente {UserId}", userId);
+        }
+        
+        // Cancella il cookie di autenticazione
+        var httpContext = _httpContextAccessor.HttpContext;
+        if (httpContext != null)
+        {
+            await httpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+        }
     }
 
     private Option<ClaimsPrincipal> GetClaimsPrincipal(string accessToken)
@@ -246,7 +315,25 @@ public class AuthService : IAuthService
         var claims = token.Claims.ToList();
         // Aggiungi il claim di autenticazione
         claims.Add(new Claim(ClaimTypes.NameIdentifier, token.Subject));
-        return new ClaimsPrincipal(new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme));
+        return Option<ClaimsPrincipal>.Success(new ClaimsPrincipal(new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme)));
+    }
+    
+    /// <summary>
+    /// Ottiene l'ID utente corrente dal cookie di autenticazione
+    /// </summary>
+    private Guid GetCurrentUserId()
+    {
+        var httpContext = _httpContextAccessor.HttpContext;
+        if (httpContext?.User?.Identity?.IsAuthenticated == true)
+        {
+            var userIdClaim = httpContext.User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim != null && Guid.TryParse(userIdClaim.Value, out var userId))
+            {
+                return userId;
+            }
+        }
+        
+        return Guid.Empty;
     }
 }
 

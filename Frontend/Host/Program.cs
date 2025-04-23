@@ -137,6 +137,15 @@ builder.Services.AddHttpClient();
 // Aggiungi i servizi di default
 builder.AddServiceDefaults();
 
+// Aggiungi i servizi di cache distribuita
+builder.Services.AddDistributedMemoryCache(); // In produzione si potrebbe usare Redis: AddStackExchangeRedisCache
+
+// Registra ITokenStorage e la sua implementazione
+builder.Services.AddScoped<ITokenStorage, DistributedTokenStorage>();
+
+// Aggiorna TokenManager come servizio scoped (non più singleton)
+builder.Services.AddScoped<TokenManager>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

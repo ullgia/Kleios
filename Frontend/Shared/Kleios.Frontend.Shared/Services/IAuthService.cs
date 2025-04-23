@@ -22,4 +22,9 @@ public interface IAuthService
     /// </summary>
     /// <returns>Un'Option contenente il token se valido, altrimenti un errore</returns>
     Task<Option<string>> GetValidAccessTokenAsync();
+    
+    /// <summary>
+    /// Esegue il logout dell'utente corrente
+    /// </summary>
+    Task LogoutAsync();
 }
