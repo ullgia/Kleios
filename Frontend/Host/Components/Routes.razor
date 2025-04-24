@@ -1,7 +1,7 @@
 ﻿@using System.Reflection
 @using Microsoft.AspNetCore.Components.Authorization
 
-<Router AppAssembly="typeof(Program).Assembly" AdditionalAssemblies="[typeof(Kleios.Modules.Auth._Imports).Assembly]">
+<Router AppAssembly="typeof(Program).Assembly" AdditionalAssemblies="[typeof(Kleios.Modules.Auth._Imports).Assembly,typeof(Kleios.Modules.System._Imports).Assembly]">
     <Found Context="routeData">
         <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(Layout.MainLayout)">
             <NotAuthorized>

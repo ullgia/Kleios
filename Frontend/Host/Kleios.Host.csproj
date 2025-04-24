@@ -17,6 +17,7 @@
     <ProjectReference Include="..\Infrastructure\Kleios.Frontend.Infrastructure\Kleios.Frontend.Infrastructure.csproj" />
     <ProjectReference Include="..\Modules\Kleios.Modules.Auth\Kleios.Modules.Auth.csproj" />
     <ProjectReference Include="..\..\Shared\Kleios.Shared\Kleios.Shared.csproj" />
+    <ProjectReference Include="..\Modules\Kleios.Modules.System\Kleios.Modules.System.csproj" />
   </ItemGroup>
 
 </Project>

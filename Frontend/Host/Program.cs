@@ -169,7 +169,7 @@ app.MapStaticAssets();
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode()
-    .AddAdditionalAssemblies([typeof(Kleios.Modules.Auth._Imports).Assembly]);
+    .AddAdditionalAssemblies([typeof(Kleios.Modules.Auth._Imports).Assembly, typeof(Kleios.Modules.System._Imports).Assembly]);
 
 app.Run();
 
