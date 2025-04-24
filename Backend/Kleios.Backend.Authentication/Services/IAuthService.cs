@@ -280,15 +280,14 @@ public class AuthService : IAuthService
             }
         }
 
-        // Ottieni la chiave segreta e crea le credenziali di firma
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"] ?? "Kleios_Super_Secret_Key_That_Should_Be_At_Least_32_Bytes_Long"));
-        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+        // Utilizza JwtConfig per ottenere le credenziali di firma
+        var creds = JwtConfig.GetSigningCredentials();
 
-        // Crea il token con una durata di 1 ora
-        var expires = DateTime.UtcNow.AddHours(1);
+        // Crea il token utilizzando le impostazioni da JwtConfig
+        var expires = DateTime.UtcNow.AddMinutes(JwtConfig.TokenValidityInMinutes);
         var token = new JwtSecurityToken(
-            issuer: _configuration["Jwt:Issuer"] ?? "Kleios",
-            audience: _configuration["Jwt:Audience"] ?? "KleiosUsers",
+            issuer: JwtConfig.Issuer,
+            audience: JwtConfig.Audience,
             claims: claims,
             expires: expires,
             signingCredentials: creds
@@ -312,7 +311,7 @@ public class AuthService : IAuthService
         var refreshToken = new RefreshToken
         {
             Token = token,
-            ExpiryDate = DateTime.UtcNow.AddDays(7), // Il refresh token scade dopo 7 giorni
+            ExpiryDate = DateTime.UtcNow.AddDays(JwtConfig.RefreshTokenValidityInDays),
             CreatedByIp = ipAddress,
             UserAgent = userAgent
         };

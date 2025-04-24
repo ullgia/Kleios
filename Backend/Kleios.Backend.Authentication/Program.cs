@@ -6,6 +6,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Reflection;
 using System.Text;
 using Kleios.Backend.Authentication.Services;
+using Kleios.Backend.Shared;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -25,16 +26,7 @@ builder.Services.AddAuthentication(options =>
 {
     options.SaveToken = true;
     options.RequireHttpsMetadata = false;
-    options.TokenValidationParameters = new TokenValidationParameters
-    {
-        ValidateIssuer = true,
-        ValidateAudience = true,
-        ValidateLifetime = true,
-        ValidateIssuerSigningKey = true,
-        ValidIssuer = builder.Configuration["JWT:ValidIssuer"],
-        ValidAudience = builder.Configuration["JWT:ValidAudience"],
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JWT:Secret"] ?? "Kleios_JWT_Secret_Key_For_Auth_At_Least_32_Characters"))
-    };
+    options.TokenValidationParameters = JwtConfig.GetTokenValidationParameters();
 });
 builder.Services.AddScoped<IAuthService, AuthService>();
 // Configura l'autorizzazione

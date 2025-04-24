@@ -19,7 +19,7 @@ public class UsersController : ControllerBase
     }
     
     [HttpGet]
-    [Authorize(Policy = AppPermissions.Users.View)]
+    //[Authorize(Policy = AppPermissions.Users.View)]
     public async Task<IActionResult> GetAllUsers([FromQuery] UserFilter? filter)
     {
         var result = await _userService.GetAllUsersAsync();
