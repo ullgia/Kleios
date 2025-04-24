@@ -1,11 +1,6 @@
 ﻿@using Kleios.Frontend.Shared.Models
 @inject IMenuService MenuService
 
-<div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="">Kleios</a>
-    </div>
-</div>
 
 <input type="checkbox" title="Navigation menu" class="navbar-toggler" />
 
@@ -17,7 +12,7 @@
             {
                 if (menuItem.SubMenus.Count > 0)
                 {
-                    <MudNavGroup Title="@menuItem.Title" Icon="@menuItem.Icon" Expanded="menuItem.IsDefaultOpen">
+                    <MudNavGroup Title="@menuItem.Title"  Icon="@menuItem.Icon" Expanded="menuItem.IsDefaultOpen">
                         @foreach (var child in menuItem.SubMenus)
                         {
                             <MudNavLink Href="@child.Href" Icon="@child.Icon">@child.Title</MudNavLink>
@@ -26,7 +21,7 @@
                 }
                 else
                 {
-                    <MudNavLink Href="@menuItem.Href" Icon="@menuItem.Icon">@menuItem.Title</MudNavLink>
+                    <MudNavLink  Href="@menuItem.Href" Icon="@menuItem.Icon">@menuItem.Title</MudNavLink>
                 }
             }
         }

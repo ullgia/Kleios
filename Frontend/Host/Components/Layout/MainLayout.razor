@@ -1,9 +1,41 @@
 ﻿@using Microsoft.AspNetCore.Components.Authorization
 @inherits LayoutComponentBase
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
-@inject IAuthService AuthService
-@inject NavigationManager NavigationManager
+<style>
+    .not-authorized-style{
+        height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #3a0647 0%, rgb(5, 39, 103) 100%);
+        color: white;
+        font-size: 1.5rem;
+        font-weight: bold;
+        text-align: center;
+        padding: 20px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        margin: 0 auto;
 
+    }
+
+    .app-bar{
+        background: linear-gradient(135deg, #3a0647 0%, rgb(5, 39, 103) 100%);
+        color: white;
+        font-size: 1.5rem;
+
+    }
+
+    .nav-bar{
+        background: linear-gradient(135deg, #3a0647 0%, rgb(5, 39, 103) 100%);
+        color: white;
+    }
+
+    .mud-nav-link-text{
+        color:white;
+        padding-top:10px;
+    }
+</style>
 <MudThemeProvider />
 <MudDialogProvider />
 <MudSnackbarProvider />
@@ -11,35 +43,26 @@
 <MudLayout>
     <AuthorizeView>
         <NotAuthorized>
-            <MudContainer MaxWidth="MaxWidth.Small" Class="d-flex align-center" Style="height: 100vh;">
-                <div class="d-flex flex-column mud-width-full">
-                    <MudPaper Elevation="25" Class="pa-8" Width="100%" MaxWidth="500px">
-                        @Body
-                    </MudPaper>
-                </div>
-            </MudContainer>
+            <div class="not-authorized-style">
+                <MudPaper Elevation="25" Square="false" Class="pa-8" Width="500px" MaxWidth="500px">
+                    @Body
+                </MudPaper>
+            </div>
+
         </NotAuthorized>
         <Authorized>
-            <MudAppBar Elevation="1">
+            <MudAppBar Elevation="1" Class="app-bar">
                 <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@((e) => DrawerToggle())" />
                 <MudText Typo="Typo.h6" Class="ml-3">Kleios</MudText>
                 <MudSpacer />
 
-                @if (_isAuthenticated)
-                {
-                    <MudMenu Icon="@Icons.Material.Filled.Person" Color="Color.Inherit" direction="Direction.Bottom" offsetY="true">
-                        <MudText Typo="Typo.body1" Class="px-4 py-2">@_username</MudText>
-                        <MudDivider />
-                    </MudMenu>
-                }
-                else
-                {
-                    <MudButton Href="/Account/login" Color="Color.Inherit">Accedi</MudButton>
-                    <MudButton Href="/register" Color="Color.Inherit" Class="ml-2">Registrati</MudButton>
-                }
+                <MudMenu Icon="@Icons.Material.Filled.Person" Color="Color.Inherit" direction="Direction.Bottom" offsetY="true">
+                    <MudText Typo="Typo.body1" Class="px-4 py-2">@_username</MudText>
+                    <MudDivider />
+                </MudMenu>
             </MudAppBar>
 
-            <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
+            <MudDrawer @bind-Open="_drawerOpen" Class="nav-bar" ClipMode="DrawerClipMode.Always" Elevation="2">
                 <NavMenu />
             </MudDrawer>
 
@@ -60,10 +83,17 @@
 
 @code {
     private bool _drawerOpen = true;
-    private bool _isAuthenticated = false;
     private string _username = "";
 
-   
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authentication = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+    
+        var user = authentication.User;
+        _username = user.Identity?.Name ?? string.Empty;
+    }
+
 
     private void DrawerToggle()
     {
