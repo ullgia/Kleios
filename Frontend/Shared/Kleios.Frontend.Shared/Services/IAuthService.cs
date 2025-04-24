@@ -11,10 +11,8 @@ namespace Kleios.Frontend.Shared.Services;
 public interface IAuthService
 {
     Task<Option<AuthResponse>> LoginAsync(string username, string password);
-    Task<Option<AuthResponse>> RegisterAsync(RegisterRequest request);
     Task<Option<string>> GetSecurityStampAsync();
     Task<Option<ClaimsPrincipal>> GetUserClaims();
-    Task<Option<IEnumerable<UserDto>>> GetUsersAsync(UserFilter filter);
     Task<Option<AuthResponse>> RefreshTokenAsync(string refreshToken);
     
     /// <summary>

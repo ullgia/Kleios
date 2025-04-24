@@ -18,9 +18,6 @@ public static class DependencyInjection
         // Registra UserInfoState come servizio scoped per memorizzare le informazioni dell'utente
         // durante tutta la richiesta (funziona anche durante prerendering server)
         services.AddScoped<IdentityRedirectManager>();
-
-        // Registra TokenManager
-        services.AddScoped<TokenManager>();
         
         // Registra AuthenticatedHttpMessageHandler come transient
         // Nota: ora dipende solo da IAuthService e non direttamente da TokenManager
@@ -41,8 +38,8 @@ public static class DependencyInjection
         // Configura HttpClient per LogsSettingsService con service discovery di Aspire e autenticazione
         ConfigureAuthenticatedHttpClient<ILogsSettingsService, LogsSettingsService>(services, "https+http://logs-settings-service");
 
-        // Configura HttpClient per UserManagementService con service discovery di Aspire e autenticazione
-        ConfigureAuthenticatedHttpClient<IUserManagementService, UserManagementService>(services, "https+http://user-management-service");
+        // Configura HttpClient per SystemAdministrationService (ex UserStateManager) con service discovery di Aspire e autenticazione
+        ConfigureAuthenticatedHttpClient<ISystemAdministrationService, SystemAdministrationService>(services, "https+http://system-service");
         
         // Registra il servizio di menu
         services.AddScoped<IMenuService, MenuService>();

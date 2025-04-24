@@ -1,7 +1,7 @@
 @page "/System/Users"
 @using Kleios.Shared.Authorization
 @attribute [Authorize(Policy = AppPermissions.Users.View)]
-@inject IAuthService AuthService
+@inject ISystemAdministrationService AuthService
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 
