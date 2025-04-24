@@ -35,6 +35,41 @@ public class RefreshToken : BaseEntity
     public bool IsRevoked { get; set; }
     
     /// <summary>
+    /// Data in cui il token è stato revocato
+    /// </summary>
+    public DateTime? RevokedAt { get; set; }
+
+    /// <summary>
+    /// Motivo della revoca (utile per tracking di sicurezza)
+    /// </summary>
+    public string? RevocationReason { get; set; }
+    
+    /// <summary>
+    /// Indirizzo IP utilizzato per la creazione del token
+    /// </summary>
+    public string CreatedByIp { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// Indirizzo IP dell'ultimo utilizzo
+    /// </summary>
+    public string? LastUsedByIp { get; set; }
+    
+    /// <summary>
+    /// User Agent del browser/client
+    /// </summary>
+    public string? UserAgent { get; set; }
+    
+    /// <summary>
+    /// Data dell'ultimo utilizzo
+    /// </summary>
+    public DateTime? LastUsedAt { get; set; }
+    
+    /// <summary>
+    /// Contatore utilizzi (utile per rilevare utilizzi anomali)
+    /// </summary>
+    public int UseCount { get; set; } = 0;
+    
+    /// <summary>
     /// Utente a cui appartiene il token
     /// </summary>
     [ForeignKey("UserId")]

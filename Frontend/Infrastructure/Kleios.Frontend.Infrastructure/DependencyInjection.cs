@@ -1,6 +1,7 @@
 // filepath: c:\Users\Giacomo\source\Kleios\Frontend\Infrastructure\Kleios.Frontend.Infrastructure\DependencyInjection.cs
 using Kleios.Frontend.Infrastructure.Services;
 using Kleios.Frontend.Shared.Services;
+using Microsoft.AspNetCore.Components.Server.Circuits;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Kleios.Frontend.Infrastructure;
@@ -19,8 +20,27 @@ public static class DependencyInjection
         // durante tutta la richiesta (funziona anche durante prerendering server)
         services.AddScoped<IdentityRedirectManager>();
         
+        // Registra il servizio per la gestione dello storage dei token
+        services.AddScoped<ITokenStore, DistributedCacheTokenStore>();
+        
+        // Registra il servizio per la sicurezza dei token
+        services.AddScoped<TokenSecurityService>();
+        
+        // Registra il servizio di refresh token per risolvere la dipendenza circolare
+        services.AddHttpClient<ITokenRefreshService, TokenRefreshService>(client =>
+        {
+            client.BaseAddress = new Uri("https+http://auth-service");
+        });
+        
+        // Registra il nuovo servizio TokenDistributionService per la gestione dei token
+        // che funziona sia con server rendering che con altre modalità
+        services.AddScoped<ITokenDistributionService, TokenDistributionService>();
+        
+        // Registra il CircuitHandler per il TokenDistributionService
+        services.AddScoped<ICircuitHandler>(sp => sp.GetRequiredService<ITokenDistributionService>() as ICircuitHandler);
+        
         // Registra AuthenticatedHttpMessageHandler come transient
-        // Nota: ora dipende solo da IAuthService e non direttamente da TokenManager
+        // Ora dipenderà dal nuovo TokenDistributionService
         services.AddTransient<AuthenticatedHttpMessageHandler>();
 
         // Configura HttpClient standard per le chiamate che non necessitano di autenticazione

@@ -1,4 +1,5 @@
 using System.Net;
+using Kleios.Shared.Models;
 
 namespace Kleios.Shared;
 
@@ -93,4 +94,7 @@ public class Option<T> : Option
     /// Conversione implicita da T a Option<T>.
     /// </summary>
     public static implicit operator Option<T>(T value) => Success(value);
+
+    public static Option<T> TooManyRequests(string message) => Failure(message, HttpStatusCode.TooManyRequests);
+
 }

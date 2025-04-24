@@ -1,6 +1,7 @@
 using Kleios.Database.Context;
 using Kleios.Database.Models;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -39,7 +40,7 @@ public static class ServiceCollectionExtensions
         }
 
         // Configura Identity
-        services.AddIdentityCore<ApplicationUser>(options =>
+        services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
             {
                 // Impostazioni delle policy delle password
                 options.Password.RequiredLength = 6;
@@ -47,13 +48,13 @@ public static class ServiceCollectionExtensions
                 options.Password.RequireLowercase = true;
                 options.Password.RequireUppercase = false;
                 options.Password.RequireNonAlphanumeric = false;
-                
+
                 // Altre impostazioni di Identity
                 options.SignIn.RequireConfirmedEmail = false;
                 options.User.RequireUniqueEmail = true;
             })
-            .AddRoles<ApplicationRole>()
-            .AddEntityFrameworkStores<KleiosDbContext>();
+            .AddEntityFrameworkStores<Kleios.Database.Context.KleiosDbContext>()
+            .AddDefaultTokenProviders();
 
         return services;
     }

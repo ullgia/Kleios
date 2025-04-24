@@ -19,7 +19,6 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Orchestration\Kleios.ServiceDefaults\Kleios.ServiceDefaults.csproj" />
     <ProjectReference Include="..\..\Backend\Kleios.Database\Kleios.Database.csproj" />
-    <ProjectReference Include="..\..\Backend\Kleios.Security\Kleios.Security.csproj" />
     <ProjectReference Include="..\..\Shared\Kleios.Shared\Kleios.Shared.csproj" />
     <ProjectReference Include="..\Kleios.Backend.Shared\Kleios.Backend.Shared.csproj" />
   </ItemGroup>

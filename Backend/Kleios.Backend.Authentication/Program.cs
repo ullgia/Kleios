@@ -1,6 +1,10 @@
 using Kleios.Database.Extensions;
-using Kleios.Security.Extensions;
 using Kleios.ServiceDefaults;
+using Kleios.Shared.Authorization;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Reflection;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,8 +14,51 @@ builder.Services.AddOpenApi();
 builder.AddServiceDefaults();
 builder.AddKleiosValidation();
 builder.Services.AddDatabaseSeeder();
-builder.Services.AddKleiosSecurity(builder.Configuration);
+builder.Services.AddKleiosDatabase(useInMemoryDatabase:true);
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+}).AddJwtBearer(options =>
+{
+    options.SaveToken = true;
+    options.RequireHttpsMetadata = false;
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = builder.Configuration["JWT:ValidIssuer"],
+        ValidAudience = builder.Configuration["JWT:ValidAudience"],
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JWT:Secret"] ?? "Kleios_JWT_Secret_Key_For_Auth_At_Least_32_Characters"))
+    };
+});
 
+// Configura l'autorizzazione
+builder.Services.AddAuthorization(options =>
+{
+    var nestedTypes = typeof(AppPermissions).GetNestedTypes(BindingFlags.Public | BindingFlags.Static);
+
+    foreach (var nestedType in nestedTypes)
+    {
+        // Ottiene tutti i campi costanti di tipo string nella classe
+        var fields = nestedType.GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy)
+            .Where(f => f is { IsLiteral: true, IsInitOnly: false } && f.FieldType == typeof(string));
+
+        foreach (var field in fields)
+        {
+            var propertyValue = field.GetValue(null);
+            if (propertyValue is not null)
+            {
+                options.AddPolicy(propertyValue.ToString()!, policy => policy
+                    .RequireAuthenticatedUser()
+                    .RequireClaim(ApplicationClaimTypes.Permission, propertyValue.ToString()!));
+            }
+        }
+    }
+});
 // Add Controllers
 builder.Services.AddControllers();
 

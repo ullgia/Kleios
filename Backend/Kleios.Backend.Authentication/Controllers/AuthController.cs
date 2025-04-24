@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Kleios.Backend.Authentication.Services;
 using Microsoft.AspNetCore.Mvc;
 using Kleios.Security.Authentication;
 using Kleios.Shared.Models;
@@ -20,11 +21,6 @@ public class AuthController : ControllerBase
         _authService = authService;
     }
 
-    [HttpPost("register")]
-    public async Task<Result<AuthResponse>> Register([FromBody] RegisterRequest request)
-    {
-        return await _authService.RegisterAsync(request);
-    }
 
     [HttpPost("login")]
     public async Task<Result<AuthResponse>> Login([FromBody] LoginRequest request)
@@ -34,8 +30,11 @@ public class AuthController : ControllerBase
             return Option<AuthResponse>.ValidationError("Dati di login non validi");
         }
 
-        var option = await _authService.LoginAsync(request);
-        return option;
+        // Aggiunta raccolta dati client per sicurezza
+        var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        var userAgent = Request.Headers.UserAgent.ToString();
+
+        return await _authService.LoginAsync(request, ipAddress, userAgent);
     }
 
     [HttpPost("refresh")]
@@ -46,18 +45,15 @@ public class AuthController : ControllerBase
             return Option<AuthResponse>.ValidationError("Token di refresh non valido");
         }
 
-        var option = await _authService.RefreshTokenAsync(request.RefreshToken);
+        // Raccolta dati client per sicurezza e tracciamento
+        var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        var userAgent = Request.Headers.UserAgent.ToString();
+
+        var option = await _authService.RefreshTokenAsync(request.RefreshToken, ipAddress, userAgent);
         return option;
     }
 
-    [HttpGet("users")]
-    [Authorize(Policy = AppPermissions.Users.View)]
-    public async Task<Result<List<UserResponse>>> GetUsers()
-    {
-        var users = await _authService.GetUsersAsync();
-        return users;
-    }
-
+   
     [HttpGet("security-stamp")]
     public async Task<Result<string>> GetSecurityStamp()
     {

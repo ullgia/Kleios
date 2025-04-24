@@ -1,7 +1,9 @@
 using System.Net;
 using System.Net.Http.Headers;
 using Kleios.Frontend.Shared.Services;
+using Microsoft.AspNetCore.Components.Server.Circuits;
 using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.Http;
 
 namespace Kleios.Frontend.Infrastructure.Services;
 
@@ -11,15 +13,21 @@ namespace Kleios.Frontend.Infrastructure.Services;
 /// </summary>
 public class AuthenticatedHttpMessageHandler : DelegatingHandler
 {
-    private readonly IAuthService _authService;
+    private readonly ITokenDistributionService _tokenService;
+    private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly CircuitHandler? _circuitHandler;
     private readonly ILogger<AuthenticatedHttpMessageHandler> _logger;
 
     public AuthenticatedHttpMessageHandler(
-        IAuthService authService,
-        ILogger<AuthenticatedHttpMessageHandler> logger)
+        ITokenDistributionService tokenService,
+        IHttpContextAccessor httpContextAccessor,
+        ILogger<AuthenticatedHttpMessageHandler> logger,
+        CircuitHandler? circuitHandler = null)
     {
-        _authService = authService;
+        _tokenService = tokenService;
+        _httpContextAccessor = httpContextAccessor;
         _logger = logger;
+        _circuitHandler = circuitHandler;
     }
 
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -31,7 +39,7 @@ public class AuthenticatedHttpMessageHandler : DelegatingHandler
         }
 
         // Aggiunge il token di autenticazione alla richiesta
-        await AddAuthenticationHeader(request,false, cancellationToken);
+        await AddAuthenticationHeader(request, false, cancellationToken);
 
         // Invia la richiesta
         var response = await base.SendAsync(request, cancellationToken);
@@ -69,16 +77,51 @@ public class AuthenticatedHttpMessageHandler : DelegatingHandler
     /// </summary>
     private async Task AddAuthenticationHeader(HttpRequestMessage request, bool forceRefresh = false, CancellationToken cancellationToken = default)
     {
-        // Ottieni un token valido da AuthService
-        var tokenResult = await _authService.GetValidAccessTokenAsync();
+        // Ottieni l'userId dal contesto HTTP
+        var userId = GetCurrentUserId();
+        if (userId == Guid.Empty)
+        {
+            _logger.LogWarning("Impossibile ottenere l'ID utente corrente");
+            return;
+        }
+        
+        // Ottieni l'ID del circuito se disponibile
+        string? circuitId = null;
+        if (_circuitHandler != null && _circuitHandler is CircuitHandler handler)
+        {
+            // Ottieni il circuito attuale se disponibile
+            circuitId = handler.Circuits.FirstOrDefault()?.Id;
+        }
+        
+        // Ottieni un token valido usando il nuovo TokenDistributionService
+        var tokenResult = await _tokenService.GetValidTokenAsync(userId, circuitId);
         
         if (tokenResult.IsSuccess)
         {
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", tokenResult.Value);
+            _logger.LogDebug("Token JWT aggiunto all'header della richiesta");
         }
         else
         {
             _logger.LogWarning("Impossibile ottenere un token valido: {Error}", tokenResult.Message);
         }
+    }
+    
+    /// <summary>
+    /// Ottiene l'ID utente corrente dal contesto HTTP
+    /// </summary>
+    private Guid GetCurrentUserId()
+    {
+        var httpContext = _httpContextAccessor.HttpContext;
+        if (httpContext?.User?.Identity?.IsAuthenticated == true)
+        {
+            var userIdClaim = httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
+            if (userIdClaim != null && Guid.TryParse(userIdClaim.Value, out var userId))
+            {
+                return userId;
+            }
+        }
+        
+        return Guid.Empty;
     }
 }

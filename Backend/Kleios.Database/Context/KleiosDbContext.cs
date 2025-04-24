@@ -30,6 +30,7 @@ public class KleiosDbContext : IdentityDbContext<
     public DbSet<RefreshToken> RefreshTokens { get; set; }
     public DbSet<AppSetting> AppSettings { get; set; }
     public DbSet<UserToken> FrontendUserTokens { get; set; } // Rinominato per evitare conflitti
+    public DbSet<SecurityEvent> SecurityEvents { get; set; } // Eventi di sicurezza per audit e monitoring
     
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

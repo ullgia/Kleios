@@ -11,11 +11,12 @@ using Microsoft.Extensions.Logging;
 using ZiggyCreatures.Caching.Fusion;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Components.Server.Circuits;
 
 namespace Kleios.Frontend.Infrastructure.Services;
 
 /// <summary>
-/// Implementazione del servizio di autenticazione che utilizza il TokenManager
+/// Implementazione del servizio di autenticazione che utilizza il TokenDistributionService
 /// per la gestione dei token
 /// </summary>
 public class AuthService : IAuthService
@@ -24,24 +25,26 @@ public class AuthService : IAuthService
     private readonly ILogger<AuthService> _logger;
     private readonly IFusionCache _fusionCache;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly ITokenDistributionService _tokenDistributionService;
+    private readonly CircuitHandler? _circuitHandler;
     
     private const string BaseEndpoint = "api/auth";
     private const string TokenRefreshCacheKey = "TokenRefresh";
-    
-    // Soglia di tolleranza per la scadenza del token in secondi
-    // Se il token scade entro questa soglia, verrà aggiornato preventivamente
-    private const int TokenExpiryThresholdSeconds = 30;
 
     public AuthService(
         HttpClient httpClient,
         IFusionCache fusionCache,
         IHttpContextAccessor httpContextAccessor,
-        ILogger<AuthService> logger)
+        ITokenDistributionService tokenDistributionService,
+        ILogger<AuthService> logger,
+        CircuitHandler? circuitHandler = null)
     {
         _httpClient = httpClient;
         _fusionCache = fusionCache;
         _httpContextAccessor = httpContextAccessor;
+        _tokenDistributionService = tokenDistributionService;
         _logger = logger;
+        _circuitHandler = circuitHandler;
     }
 
     /// <summary>
@@ -63,8 +66,31 @@ public class AuthService : IAuthService
             Password = password
         };
 
-        return await _httpClient.PostAsJson<AuthResponse>($"{BaseEndpoint}/login", request);
+        var result = await _httpClient.PostAsJson<AuthResponse>($"{BaseEndpoint}/login", request);
         
+        if (result.IsSuccess)
+        {
+            // Ottieni l'ID del circuito se disponibile (server rendering)
+            string? circuitId = null;
+            if (_circuitHandler != null && _circuitHandler is CircuitHandler handler)
+            {
+                // Ottieni il circuito attuale se disponibile
+                circuitId = handler.Circuits.FirstOrDefault()?.Id;
+            }
+            
+            // Utilizza il TokenDistributionService per salvare i token
+            await _tokenDistributionService.SaveTokensAsync(
+                result.Value.UserId, 
+                result.Value.Token, 
+                result.Value.RefreshToken, 
+                circuitId);
+            
+            // Invalida cache
+            await _fusionCache.RemoveAsync($"User-Claims-{result.Value.UserId}");
+            _logger.LogDebug("Token salvati e cache invalidata");
+        }
+        
+        return result;
     }
 
     public async Task<Option<string>> GetSecurityStampAsync()
@@ -81,21 +107,26 @@ public class AuthService : IAuthService
             _logger.LogWarning("Impossibile ottenere l'ID utente corrente");
             return Option<ClaimsPrincipal>.ServerError("Utente non autenticato");
         }
-
-        var token = await GetValidAccessTokenAsync();
-        if (!token.IsSuccess)
+        
+        // Ottieni l'ID del circuito se disponibile (server rendering)
+        string? circuitId = null;
+        if (_circuitHandler != null && _circuitHandler is CircuitHandler handler)
         {
-            _logger.LogWarning("Impossibile ottenere un token valido: {Error}", token.Message);
-            return Option<ClaimsPrincipal>.ServerError("Impossibile ottenere un token valido");
+            // Ottieni il circuito attuale se disponibile
+            circuitId = handler.Circuits.FirstOrDefault()?.Id;
         }
-        // Decodifica il token JWT per ottenere i claims
-        var claimsPrincipal = GetClaimsPrincipal(token.Value);
-        if (!claimsPrincipal.IsSuccess)
+        
+        // Utilizza il TokenDistributionService per ottenere un token valido
+        var tokenResult = await _tokenDistributionService.GetValidTokenAsync(userId, circuitId);
+        
+        if (tokenResult.IsSuccess)
         {
-            _logger.LogWarning("Impossibile decodificare il token JWT: {Error}", claimsPrincipal.Message);
-            return Option<ClaimsPrincipal>.ServerError("Impossibile decodificare il token JWT");
+            return GetClaimsPrincipal(tokenResult.Value);
         }
-        return claimsPrincipal;
+        
+        // Se il token non è valido, l'utente deve effettuare il login
+        _logger.LogWarning("Token non valido, l'utente deve effettuare il login");
+        return Option<ClaimsPrincipal>.ServerError("Token non valido");
     }
 
     /// <summary>
@@ -117,7 +148,40 @@ public class AuthService : IAuthService
             RefreshToken = refreshToken
         };
 
-        return await _httpClient.PostAsJson<AuthResponse>($"{BaseEndpoint}/refresh", request);
+        // Chiamata diretta all'endpoint di refresh
+        var response = await _httpClient.PostAsJson<AuthResponse>($"{BaseEndpoint}/refresh", request);
+        
+        if (response.IsSuccess)
+        {
+            // Ottieni l'ID del circuito se disponibile (server rendering)
+            string? circuitId = null;
+            if (_circuitHandler != null && _circuitHandler is CircuitHandler handler)
+            {
+                // Ottieni il circuito attuale se disponibile
+                circuitId = handler.Circuits.FirstOrDefault()?.Id;
+            }
+            
+            // Utilizza il TokenDistributionService per salvare i nuovi token
+            await _tokenDistributionService.SaveTokensAsync(
+                response.Value.UserId,
+                response.Value.Token,
+                response.Value.RefreshToken,
+                circuitId);
+            
+            _logger.LogInformation("Refresh token completato con successo");
+            
+            // Invalida eventuali cache correlate
+            if (response.Value.UserId != Guid.Empty)
+            {
+                await _fusionCache.RemoveAsync($"User-Claims-{response.Value.UserId}");
+            }
+        }
+        else
+        {
+            _logger.LogWarning("Refresh token fallito: {Error}", response.Message);
+        }
+        
+        return response;
     }
     
     /// <summary>
@@ -125,29 +189,31 @@ public class AuthService : IAuthService
     /// </summary>
     public async Task<Option<string>> GetValidAccessTokenAsync()
     {
-        // get the token from the cookies 
-        var httpContext = _httpContextAccessor.HttpContext;
-        if (httpContext == null)
+        // Ottieni l'ID utente corrente
+        var userId = GetCurrentUserId();
+        if (userId == Guid.Empty)
         {
-            _logger.LogWarning("HttpContext non disponibile");
-            return Option<string>.ServerError("HttpContext non disponibile");
+            _logger.LogWarning("Impossibile ottenere l'ID utente corrente per il token");
+            return Option<string>.ServerError("Utente non autenticato");
         }
-        var token = httpContext.Request.Cookies["refresh_token"];
-
-        if (string.IsNullOrEmpty(token))
+        
+        // Ottieni l'ID del circuito se disponibile (server rendering)
+        string? circuitId = null;
+        if (_circuitHandler != null && _circuitHandler is CircuitHandler handler)
         {
-            _logger.LogWarning("Token di refresh non trovato nei cookie");
-            return Option<string>.ServerError("Token di refresh non trovato");
+            // Ottieni il circuito attuale se disponibile
+            circuitId = handler.Circuits.FirstOrDefault()?.Id;
         }
-
-        var accessToken = await RefreshTokenAsync(token);
-        if (!accessToken.IsSuccess)
+        
+        // Utilizza il TokenDistributionService per ottenere un token valido
+        var tokenResult = await _tokenDistributionService.GetValidTokenAsync(userId, circuitId);
+        
+        if (!tokenResult.IsSuccess)
         {
-            _logger.LogWarning("Impossibile ottenere il token di accesso: {Error}", accessToken.Message);
-            return Option<string>.ServerError("Impossibile ottenere il token di accesso");
+            _logger.LogWarning("Impossibile ottenere un token valido: {Error}", tokenResult.Message);
         }
-
-        return accessToken.Value.Token;
+        
+        return tokenResult;
     }
 
     /// <summary>
@@ -155,7 +221,33 @@ public class AuthService : IAuthService
     /// </summary>
     public async Task LogoutAsync()
     {
-        throw new NotImplementedException();
+        var userId = GetCurrentUserId();
+        if (userId != Guid.Empty)
+        {
+            // Ottieni l'ID del circuito se disponibile (server rendering)
+            string? circuitId = null;
+            if (_circuitHandler != null && _circuitHandler is CircuitHandler handler)
+            {
+                // Ottieni il circuito attuale se disponibile
+                circuitId = handler.Circuits.FirstOrDefault()?.Id;
+            }
+            
+            // Utilizza il TokenDistributionService per invalidare i token
+            await _tokenDistributionService.InvalidateTokensAsync(userId, circuitId);
+            
+            // Invalida cache correlate
+            await _fusionCache.RemoveAsync($"User-Claims-{userId}");
+            await _fusionCache.RemoveAsync($"{TokenRefreshCacheKey}_{userId}");
+            
+            _logger.LogInformation("Logout completato per l'utente {UserId}", userId);
+        }
+        
+        // Cancella il cookie di autenticazione
+        var httpContext = _httpContextAccessor.HttpContext;
+        if (httpContext != null)
+        {
+            await httpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+        }
     }
 
     private Option<ClaimsPrincipal> GetClaimsPrincipal(string accessToken)
