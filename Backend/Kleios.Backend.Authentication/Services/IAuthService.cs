@@ -11,6 +11,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using Kleios.Shared.Authorization;
 
 namespace Kleios.Backend.Authentication.Services;
 
@@ -269,12 +270,12 @@ public class AuthService : IAuthService
                 var permissions = await _dbContext.RolePermissions
                     .Where(rp => rp.RoleId == roleEntity.Id)
                     .Include(rp => rp.Permission)
-                    .Select(rp => rp.Permission.Name)
+                    .Select(rp => rp.Permission)
                     .ToListAsync();
                 
                 foreach (var permission in permissions)
                 {
-                    claims.Add(new Claim("permission", permission));
+                    claims.Add(new Claim(ApplicationClaimTypes.Permission, permission.SystemName));
                 }
             }
         }

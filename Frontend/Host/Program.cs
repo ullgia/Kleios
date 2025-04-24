@@ -46,6 +46,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
             {
                 var userId = userIdClaim.Value;
 
+
                 var fusionCache = context.HttpContext.RequestServices.GetRequiredService<IFusionCache>();
                 var authService = context.HttpContext.RequestServices.GetRequiredService<IAuthService>();
 
@@ -55,13 +56,10 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
                     cacheKey,
                     async _ =>
                     {
-                        var principal = await authService.GetUserClaims();
+                        var principal = await authService.GetUserClaims(Guid.Parse(userId));
 
                         if (principal.IsFailure)
                         {
-                            context.RejectPrincipal();
-                            await context.HttpContext.SignOutAsync(
-                                CookieAuthenticationDefaults.AuthenticationScheme);
                             return new ClaimsPrincipal();
                         }
 
@@ -69,6 +67,15 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
                         return principal.Value;
                     }, TimeSpan.FromSeconds(30));
 
+                if (!(principal.Identity?.IsAuthenticated ?? false))
+                {
+                    // redirect to login page 
+                    context.RejectPrincipal();
+                    await context.HttpContext.SignOutAsync(
+                        CookieAuthenticationDefaults.AuthenticationScheme);
+                    return;
+
+                }
                 context.ReplacePrincipal(principal);
                 context.ShouldRenew = true;
 

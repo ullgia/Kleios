@@ -89,10 +89,9 @@ public class AuthService : IAuthService
         return await _httpClient.Get<string>($"{BaseEndpoint}/security-stamp");
     }
 
-    public async Task<Option<ClaimsPrincipal>> GetUserClaims()
+    public async Task<Option<ClaimsPrincipal>> GetUserClaims(Guid userId)
     {
-        // Ottieni l'ID utente corrente dal cookie di autenticazione
-        var userId = GetCurrentUserId();
+
         if (userId == Guid.Empty)
         {
             _logger.LogWarning("Impossibile ottenere l'ID utente corrente");
@@ -165,61 +164,7 @@ public class AuthService : IAuthService
         return response;
     }
     
-    /// <summary>
-    /// Ottiene un token JWT valido, effettuando il refresh se necessario
-    /// </summary>
-    public async Task<Option<string>> GetValidAccessTokenAsync()
-    {
-        // Ottieni l'ID utente corrente
-        var userId = GetCurrentUserId();
-        if (userId == Guid.Empty)
-        {
-            _logger.LogWarning("Impossibile ottenere l'ID utente corrente per il token");
-            return Option<string>.ServerError("Utente non autenticato");
-        }
-        
-        // Prendiamo l'ID di correlazione dalla richiesta HTTP se disponibile
-        string? correlationId = _httpContextAccessor.HttpContext?.TraceIdentifier;
-        
-        // Utilizza il TokenDistributionService per ottenere un token valido
-        var tokenResult = await _tokenDistributionService.GetValidTokenAsync(userId, correlationId);
-        
-        if (!tokenResult.IsSuccess)
-        {
-            _logger.LogWarning("Impossibile ottenere un token valido: {Error}", tokenResult.Message);
-        }
-        
-        return tokenResult;
-    }
-
-    /// <summary>
-    /// Esegue il logout dell'utente
-    /// </summary>
-    public async Task LogoutAsync()
-    {
-        var userId = GetCurrentUserId();
-        if (userId != Guid.Empty)
-        {
-            // Prendiamo l'ID di correlazione dalla richiesta HTTP se disponibile
-            string? correlationId = _httpContextAccessor.HttpContext?.TraceIdentifier;
-            
-            // Utilizza il TokenDistributionService per invalidare i token
-            await _tokenDistributionService.InvalidateTokensAsync(userId, correlationId);
-            
-            // Invalida cache correlate
-            await _fusionCache.RemoveAsync($"User-Claims-{userId}");
-            await _fusionCache.RemoveAsync($"{TokenRefreshCacheKey}_{userId}");
-            
-            _logger.LogInformation("Logout completato per l'utente {UserId}", userId);
-        }
-        
-        // Cancella il cookie di autenticazione
-        var httpContext = _httpContextAccessor.HttpContext;
-        if (httpContext != null)
-        {
-            await httpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-        }
-    }
+    
 
     private Option<ClaimsPrincipal> GetClaimsPrincipal(string accessToken)
     {
