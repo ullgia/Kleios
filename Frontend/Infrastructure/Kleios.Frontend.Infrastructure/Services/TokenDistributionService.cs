@@ -1,5 +1,4 @@
 // filepath: c:\Users\Giacomo\source\Kleios\Frontend\Infrastructure\Kleios.Frontend.Infrastructure\Services\TokenDistributionService.cs
-using Microsoft.AspNetCore.Components.Server.Circuits;
 using Kleios.Frontend.Shared.Services;
 using Kleios.Shared;
 using Kleios.Shared.Models;
@@ -12,7 +11,7 @@ namespace Kleios.Frontend.Infrastructure.Services;
 /// Servizio che gestisce la distribuzione e il recupero dei token JWT
 /// indipendentemente dal modello di rendering (server o client)
 /// </summary>
-public class TokenDistributionService : ITokenDistributionService, ICircuitHandler
+public class TokenDistributionService : ITokenDistributionService
 {
     private readonly ITokenStore _tokenStore;
     private readonly ITokenRefreshService _tokenRefreshService;
@@ -142,35 +141,16 @@ public class TokenDistributionService : ITokenDistributionService, ICircuitHandl
         }
     }
     
-    #region ICircuitHandler
-    
-    public Task OnCircuitOpenedAsync(Circuit circuit, CancellationToken cancellationToken)
-    {
-        // Nessuna operazione necessaria all'apertura del circuito
-        return Task.CompletedTask;
-    }
-    
-    public Task OnCircuitClosedAsync(Circuit circuit, CancellationToken cancellationToken)
+    /// <summary>
+    /// Gestisce la chiusura di un circuito
+    /// </summary>
+    public async Task HandleCircuitClosedAsync(string circuitId)
     {
         // Quando il circuito viene chiuso, rimuoviamo la sua associazione con il tokenId
         if (_tokenStore is DistributedCacheTokenStore cacheStore)
         {
-            return cacheStore.UnregisterContextAsync(circuit.Id);
+            await cacheStore.UnregisterContextAsync(circuitId);
+            _logger.LogDebug("Circuito {CircuitId} chiuso e disassociato", circuitId);
         }
-        return Task.CompletedTask;
     }
-    
-    public Task OnConnectionDownAsync(Circuit circuit, CancellationToken cancellationToken)
-    {
-        // Possiamo implementare logica specifica quando la connessione cade
-        return Task.CompletedTask;
-    }
-    
-    public Task OnConnectionUpAsync(Circuit circuit, CancellationToken cancellationToken)
-    {
-        // Possiamo implementare logica specifica quando la connessione ritorna attiva
-        return Task.CompletedTask;
-    }
-    
-    #endregion
 }

@@ -1,7 +1,6 @@
 using System.Security.Claims;
 using Kleios.Backend.Authentication.Services;
 using Microsoft.AspNetCore.Mvc;
-using Kleios.Security.Authentication;
 using Kleios.Shared.Models;
 using Kleios.Shared;
 using Kleios.Backend.Shared;

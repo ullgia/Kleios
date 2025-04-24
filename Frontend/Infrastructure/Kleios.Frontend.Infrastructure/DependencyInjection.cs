@@ -1,7 +1,5 @@
-// filepath: c:\Users\Giacomo\source\Kleios\Frontend\Infrastructure\Kleios.Frontend.Infrastructure\DependencyInjection.cs
 using Kleios.Frontend.Infrastructure.Services;
 using Kleios.Frontend.Shared.Services;
-using Microsoft.AspNetCore.Components.Server.Circuits;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Kleios.Frontend.Infrastructure;
@@ -36,8 +34,7 @@ public static class DependencyInjection
         // che funziona sia con server rendering che con altre modalità
         services.AddScoped<ITokenDistributionService, TokenDistributionService>();
         
-        // Registra il CircuitHandler per il TokenDistributionService
-        services.AddScoped<ICircuitHandler>(sp => sp.GetRequiredService<ITokenDistributionService>() as ICircuitHandler);
+        // Non registriamo TokenDistributionService come ICircuitHandler perché non è più necessario
         
         // Registra AuthenticatedHttpMessageHandler come transient
         // Ora dipenderà dal nuovo TokenDistributionService

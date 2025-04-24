@@ -11,7 +11,6 @@ using Microsoft.Extensions.Logging;
 using ZiggyCreatures.Caching.Fusion;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Components.Server.Circuits;
 
 namespace Kleios.Frontend.Infrastructure.Services;
 
@@ -26,7 +25,6 @@ public class AuthService : IAuthService
     private readonly IFusionCache _fusionCache;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly ITokenDistributionService _tokenDistributionService;
-    private readonly CircuitHandler? _circuitHandler;
     
     private const string BaseEndpoint = "api/auth";
     private const string TokenRefreshCacheKey = "TokenRefresh";
@@ -36,15 +34,13 @@ public class AuthService : IAuthService
         IFusionCache fusionCache,
         IHttpContextAccessor httpContextAccessor,
         ITokenDistributionService tokenDistributionService,
-        ILogger<AuthService> logger,
-        CircuitHandler? circuitHandler = null)
+        ILogger<AuthService> logger)
     {
         _httpClient = httpClient;
         _fusionCache = fusionCache;
         _httpContextAccessor = httpContextAccessor;
         _tokenDistributionService = tokenDistributionService;
         _logger = logger;
-        _circuitHandler = circuitHandler;
     }
 
     /// <summary>
@@ -70,20 +66,15 @@ public class AuthService : IAuthService
         
         if (result.IsSuccess)
         {
-            // Ottieni l'ID del circuito se disponibile (server rendering)
-            string? circuitId = null;
-            if (_circuitHandler != null && _circuitHandler is CircuitHandler handler)
-            {
-                // Ottieni il circuito attuale se disponibile
-                circuitId = handler.Circuits.FirstOrDefault()?.Id;
-            }
+            // Prendiamo l'ID di correlazione dalla richiesta HTTP se disponibile
+            string? correlationId = _httpContextAccessor.HttpContext?.TraceIdentifier;
             
             // Utilizza il TokenDistributionService per salvare i token
             await _tokenDistributionService.SaveTokensAsync(
                 result.Value.UserId, 
                 result.Value.Token, 
                 result.Value.RefreshToken, 
-                circuitId);
+                correlationId);
             
             // Invalida cache
             await _fusionCache.RemoveAsync($"User-Claims-{result.Value.UserId}");
@@ -108,16 +99,11 @@ public class AuthService : IAuthService
             return Option<ClaimsPrincipal>.ServerError("Utente non autenticato");
         }
         
-        // Ottieni l'ID del circuito se disponibile (server rendering)
-        string? circuitId = null;
-        if (_circuitHandler != null && _circuitHandler is CircuitHandler handler)
-        {
-            // Ottieni il circuito attuale se disponibile
-            circuitId = handler.Circuits.FirstOrDefault()?.Id;
-        }
+        // Prendiamo l'ID di correlazione dalla richiesta HTTP se disponibile
+        string? correlationId = _httpContextAccessor.HttpContext?.TraceIdentifier;
         
         // Utilizza il TokenDistributionService per ottenere un token valido
-        var tokenResult = await _tokenDistributionService.GetValidTokenAsync(userId, circuitId);
+        var tokenResult = await _tokenDistributionService.GetValidTokenAsync(userId, correlationId);
         
         if (tokenResult.IsSuccess)
         {
@@ -153,20 +139,15 @@ public class AuthService : IAuthService
         
         if (response.IsSuccess)
         {
-            // Ottieni l'ID del circuito se disponibile (server rendering)
-            string? circuitId = null;
-            if (_circuitHandler != null && _circuitHandler is CircuitHandler handler)
-            {
-                // Ottieni il circuito attuale se disponibile
-                circuitId = handler.Circuits.FirstOrDefault()?.Id;
-            }
+            // Prendiamo l'ID di correlazione dalla richiesta HTTP se disponibile
+            string? correlationId = _httpContextAccessor.HttpContext?.TraceIdentifier;
             
             // Utilizza il TokenDistributionService per salvare i nuovi token
             await _tokenDistributionService.SaveTokensAsync(
                 response.Value.UserId,
                 response.Value.Token,
                 response.Value.RefreshToken,
-                circuitId);
+                correlationId);
             
             _logger.LogInformation("Refresh token completato con successo");
             
@@ -197,16 +178,11 @@ public class AuthService : IAuthService
             return Option<string>.ServerError("Utente non autenticato");
         }
         
-        // Ottieni l'ID del circuito se disponibile (server rendering)
-        string? circuitId = null;
-        if (_circuitHandler != null && _circuitHandler is CircuitHandler handler)
-        {
-            // Ottieni il circuito attuale se disponibile
-            circuitId = handler.Circuits.FirstOrDefault()?.Id;
-        }
+        // Prendiamo l'ID di correlazione dalla richiesta HTTP se disponibile
+        string? correlationId = _httpContextAccessor.HttpContext?.TraceIdentifier;
         
         // Utilizza il TokenDistributionService per ottenere un token valido
-        var tokenResult = await _tokenDistributionService.GetValidTokenAsync(userId, circuitId);
+        var tokenResult = await _tokenDistributionService.GetValidTokenAsync(userId, correlationId);
         
         if (!tokenResult.IsSuccess)
         {
@@ -224,16 +200,11 @@ public class AuthService : IAuthService
         var userId = GetCurrentUserId();
         if (userId != Guid.Empty)
         {
-            // Ottieni l'ID del circuito se disponibile (server rendering)
-            string? circuitId = null;
-            if (_circuitHandler != null && _circuitHandler is CircuitHandler handler)
-            {
-                // Ottieni il circuito attuale se disponibile
-                circuitId = handler.Circuits.FirstOrDefault()?.Id;
-            }
+            // Prendiamo l'ID di correlazione dalla richiesta HTTP se disponibile
+            string? correlationId = _httpContextAccessor.HttpContext?.TraceIdentifier;
             
             // Utilizza il TokenDistributionService per invalidare i token
-            await _tokenDistributionService.InvalidateTokensAsync(userId, circuitId);
+            await _tokenDistributionService.InvalidateTokensAsync(userId, correlationId);
             
             // Invalida cache correlate
             await _fusionCache.RemoveAsync($"User-Claims-{userId}");

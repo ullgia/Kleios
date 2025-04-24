@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Headers;
 using Kleios.Frontend.Shared.Services;
-using Microsoft.AspNetCore.Components.Server.Circuits;
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Http;
 
@@ -15,19 +14,16 @@ public class AuthenticatedHttpMessageHandler : DelegatingHandler
 {
     private readonly ITokenDistributionService _tokenService;
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly CircuitHandler? _circuitHandler;
     private readonly ILogger<AuthenticatedHttpMessageHandler> _logger;
 
     public AuthenticatedHttpMessageHandler(
         ITokenDistributionService tokenService,
         IHttpContextAccessor httpContextAccessor,
-        ILogger<AuthenticatedHttpMessageHandler> logger,
-        CircuitHandler? circuitHandler = null)
+        ILogger<AuthenticatedHttpMessageHandler> logger)
     {
         _tokenService = tokenService;
         _httpContextAccessor = httpContextAccessor;
         _logger = logger;
-        _circuitHandler = circuitHandler;
     }
 
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -85,16 +81,11 @@ public class AuthenticatedHttpMessageHandler : DelegatingHandler
             return;
         }
         
-        // Ottieni l'ID del circuito se disponibile
-        string? circuitId = null;
-        if (_circuitHandler != null && _circuitHandler is CircuitHandler handler)
-        {
-            // Ottieni il circuito attuale se disponibile
-            circuitId = handler.Circuits.FirstOrDefault()?.Id;
-        }
+        // Prendiamo l'ID di correlazione dalla richiesta HTTP se disponibile
+        string? correlationId = _httpContextAccessor.HttpContext?.TraceIdentifier;
         
         // Ottieni un token valido usando il nuovo TokenDistributionService
-        var tokenResult = await _tokenService.GetValidTokenAsync(userId, circuitId);
+        var tokenResult = await _tokenService.GetValidTokenAsync(userId, correlationId);
         
         if (tokenResult.IsSuccess)
         {
