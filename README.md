@@ -1,42 +1,51 @@
 # Kleios
 
-Kleios è un'applicazione .NET moderna con un'architettura basata su microservizi che utilizza Blazor per il frontend e ASP.NET Core per i servizi backend.
+Kleios is a modern .NET application with a microservices-based architecture that uses Blazor for the frontend and ASP.NET Core for backend services.
 
-## Struttura del Progetto
+## Project Structure
 
-La soluzione è organizzata nelle seguenti aree principali:
+The solution is organized into the following main areas:
 
 ### Frontend
-- **Host**: L'applicazione Blazor principale che utilizza componenti interattivi lato server
-- **Modules**: Moduli riutilizzabili con funzionalità specifiche
-  - **Auth**: Modulo per la gestione dell'autenticazione e autorizzazione
+- **Host**: The main Blazor application that uses server-side interactive components
+- **Modules**: Reusable modules with specific functionality
+  - **Auth**: Module for authentication and authorization management
+  - **System**: Module for system administration and configuration
+- **Infrastructure**: Shared infrastructure components for frontend services
+- **Shared**: Common components, models, and utilities used across frontend modules
 
 ### Backend
-- **Authentication**: Servizio API dedicato alla gestione dell'autenticazione degli utenti
-- **LogsSettings**: Servizio API dedicato alla gestione dei log e delle impostazioni di sistema
+- **Authentication**: Dedicated API service for user authentication
+- **System**: API service for system administration, logs, and settings
+- **Database**: Data access layer and entity models
+- **Shared**: Common utilities and models for backend services
 
 ### Orchestration
-- **AppHost**: Host di orchestrazione per i microservizi basato su .NET Aspire
-- **ServiceDefaults**: Configurazioni predefinite condivise tra i servizi
+- **AppHost**: Orchestration host for microservices based on .NET Aspire
+- **ServiceDefaults**: Shared default configurations for services
 
-## Tecnologie Utilizzate
+## Technologies Used
 
-- **.NET 9.0**: Framework principale per lo sviluppo
-- **Blazor**: Per lo sviluppo del frontend con componenti interattivi
-- **MudBlazor**: Libreria di componenti UI per Blazor
-- **.NET Aspire**: Per l'orchestrazione dei microservizi
-- **ASP.NET Core**: Per lo sviluppo delle API backend
+- **.NET 9.0**: Main development framework
+- **Blazor**: For frontend development with interactive components
+- **MudBlazor**: UI component library for Blazor
+- **.NET Aspire**: For microservices orchestration
+- **ASP.NET Core**: For backend API development
+- **Entity Framework Core**: For data access and ORM
+- **ZiggyCreatures.Caching.Fusion**: Advanced caching solution for performance optimization
+- **JWT Authentication**: For secure API access
+- **OpenID Connect**: For identity management
 
-## Architettura Tecnica
+## Technical Architecture
 
-### Panoramica dell'Architettura
+### Architecture Overview
 
-Kleios implementa un'architettura a microservizi moderna, dove ogni servizio è responsabile per un dominio specifico dell'applicazione. Questa separazione permette di:
+Kleios implements a modern microservices architecture, where each service is responsible for a specific domain of the application. This separation allows:
 
-- Sviluppare, testare e deployare i servizi in modo indipendente
-- Scalare i componenti in base al carico specifico
-- Isolamento dei fault e maggiore resilienza
-- Adottare tecnologie diverse per servizi diversi quando necessario
+- Independent development, testing, and deployment of services
+- Scaling components based on specific load
+- Fault isolation and increased resilience
+- Adopting different technologies for different services when necessary
 
 ```
 ┌─────────────────┐     ┌──────────────────────┐
@@ -60,161 +69,167 @@ Kleios implementa un'architettura a microservizi moderna, dove ogni servizio è 
 └──────────────┘  └──────────────┘ └──────────────┘
 ```
 
-### Sistema di Autenticazione e Autorizzazione
+### Authentication and Authorization System
 
-Kleios implementa un sistema di autenticazione e autorizzazione robusto:
+Kleios implements a robust authentication and authorization system:
 
-- **Autenticazione basata su cookie**: Per una sicura gestione delle sessioni utente
-- **JWT con refresh token**: Per l'autenticazione nelle API e il rinnovo automatico delle sessioni
-- **Policy di autorizzazione granulari**: Basate su ruoli e permessi specifici
-- **Gestione centralizzata degli utenti**: Con supporto per registrazione, login e gestione profili
+- **Cookie-based authentication**: For secure user session management
+- **JWT with refresh tokens**: For API authentication and automatic session renewal
+- **Granular authorization policies**: Based on roles and specific permissions
+- **Centralized user management**: With support for registration, login, and profile management
+- **Token Distribution Service**: Manages token issuance and validation across services
+- **Smart Caching**: Optimizes token validation with fusion caching strategy
 
-Il sistema utilizza il pattern Claims-based Identity di .NET Core e implementa:
-- Interceptor HTTP per la gestione automatica dei token
-- Provider personalizzato per lo stato di autenticazione in Blazor
-- Meccanismi di rinnovo trasparente dei token
+The system uses .NET Core's Claims-based Identity pattern and implements:
+- HTTP interceptors for automatic token management
+- Custom provider for authentication state in Blazor
+- Transparent token renewal mechanisms
+- Security hardening with anti-forgery protection
 
-### Comunicazione tra Servizi
+### Inter-Service Communication
 
-I servizi comunicano tra loro utilizzando:
+Services communicate with each other using:
 
-- **HTTP/REST**: Per la maggior parte delle comunicazioni sincrone
-- **Gestione centralizzata degli errori**: Attraverso il tipo `Result<T>` personalizzato
-- **Configurazione automatica degli endpoint**: Tramite .NET Aspire
+- **HTTP/REST**: For most synchronous communications
+- **Centralized error handling**: Through the custom `Result<T>` type
+- **Automatic endpoint configuration**: Via .NET Aspire
+- **Resilient HTTP clients**: With retry policies and circuit breakers
 
-## Requisiti
+## Requirements
 
 - **.NET 9.0 SDK**
-- **Visual Studio 2022** (versione 17.10 o superiore) o **Visual Studio Code** con le estensioni C#
-- **Docker Desktop** (opzionale, per esecuzione containerizzata)
+- **Visual Studio 2022** (version 17.10 or higher) or **Visual Studio Code** with C# extensions
+- **Docker Desktop** (optional, for containerized execution)
 
-## Configurazione dell'Ambiente di Sviluppo
+## Development Environment Configuration
 
-### Prerequisiti
+### Prerequisites
 
-1. Installa .NET 9.0 SDK dalla [pagina ufficiale di download](https://dotnet.microsoft.com/download)
-2. Se utilizzi Visual Studio, assicurati di avere installato i carichi di lavoro:
-   - Sviluppo ASP.NET e web
-   - Sviluppo di Azure
-   - Sviluppo multipiattaforma .NET
+1. Install .NET 9.0 SDK from the [official download page](https://dotnet.microsoft.com/download)
+2. If using Visual Studio, make sure you have installed the workloads:
+   - ASP.NET and web development
+   - Azure development
+   - .NET multi-platform app development
 
-### Setup Iniziale
+### Initial Setup
 
-1. Clona il repository
+1. Clone the repository
    ```bash
-   git clone https://github.com/tuo-username/Kleios.git
+   git clone https://github.com/your-username/Kleios.git
    cd Kleios
    ```
 
-2. Ripristina i pacchetti NuGet
+2. Restore NuGet packages
    ```bash
    dotnet restore
    ```
 
-3. Configura le impostazioni dell'applicazione
-   - Copia e rinomina i file `appsettings.example.json` in `appsettings.Development.json` in ciascun progetto
-   - Configura le stringhe di connessione al database e altre impostazioni necessarie
+3. Configure application settings
+   - Copy and rename the `appsettings.example.json` files to `appsettings.Development.json` in each project
+   - Configure database connection strings and other necessary settings
 
-### Avvio dell'Applicazione
+### Starting the Application
 
-Per avviare l'applicazione in modalità sviluppo:
+To start the application in development mode:
 
-1. Imposta `Kleios.AppHost` come progetto di avvio
-2. Premi F5 o avvia il debug
+1. Set `Kleios.AppHost` as the startup project
+2. Press F5 or start debugging
 
-Questo avvierà l'orchestrazione di tutti i servizi necessari attraverso .NET Aspire, che:
-- Avvia tutti i microservizi in parallelo
-- Configura automaticamente le URL e le porte
-- Configura la service discovery
-- Fornisce un dashboard per il monitoraggio dei servizi
+This will start the orchestration of all necessary services through .NET Aspire, which:
+- Starts all microservices in parallel
+- Automatically configures URLs and ports
+- Configures service discovery
+- Provides a dashboard for service monitoring
 
-## Struttura dei Moduli
+## Module Structure
 
-Kleios segue un'architettura modulare dove ogni funzionalità principale è isolata in un modulo specifico. Questo approccio consente:
+Kleios follows a modular architecture where each main functionality is isolated in a specific module. This approach allows:
 
-- Sviluppo indipendente delle funzionalità
-- Riutilizzo dei componenti
-- Separazione delle responsabilità
-- Manutenibilità migliorata
+- Independent development of features
+- Component reuse
+- Separation of concerns
+- Improved maintainability
 
-### Pattern di Progettazione Utilizzati
+### Design Patterns Used
 
-- **Clean Architecture**: Separazione delle responsabilità in layer
-- **CQRS (Command Query Responsibility Segregation)**: Per alcune operazioni complesse
-- **Repository Pattern**: Per l'accesso ai dati
-- **Dependency Injection**: Per accoppiamento debole tra componenti
-- **Result Pattern**: Per la gestione unificata degli errori
+- **Clean Architecture**: Separation of responsibilities in layers
+- **CQRS (Command Query Responsibility Segregation)**: For complex operations
+- **Repository Pattern**: For data access
+- **Dependency Injection**: For loose coupling between components
+- **Result Pattern**: For unified error handling
+- **Options Pattern**: For configuration management
+- **Mediator Pattern**: For decoupling request handlers
 
-## Gestione degli Errori e Logging
+## Error Handling and Logging
 
-Kleios implementa un sistema centralizzato di gestione degli errori che:
+Kleios implements a centralized error handling system that:
 
-- Cattura e registra eccezioni in tutti i livelli dell'applicazione
-- Fornisce risposte di errore consistenti attraverso il tipo `Result<T>`
-- Utilizza logging strutturato per facilitare l'analisi
-- Centralizza la visualizzazione e la gestione dei log attraverso il servizio LogsSettings
+- Captures and logs exceptions at all levels of the application
+- Provides consistent error responses through the `Result<T>` type
+- Uses structured logging to facilitate analysis
+- Centralizes log viewing and management through the System service
 
 ## Deployment
 
-### Ambiente di Test
+### Test Environment
 
-Per il deployment in ambiente di test:
+For deployment in a test environment:
 
-1. Utilizza il comando `dotnet publish` con la configurazione appropriata
-2. Implementa CI/CD con GitHub Actions o Azure DevOps
-3. Monitora le prestazioni e i log attraverso il dashboard di Aspire
+1. Use the `dotnet publish` command with the appropriate configuration
+2. Implement CI/CD with GitHub Actions or Azure DevOps
+3. Monitor performance and logs through the Aspire dashboard
 
-### Ambiente di Produzione
+### Production Environment
 
-Per ambienti di produzione si raccomanda:
+For production environments it is recommended:
 
-1. Utilizzo di container Docker orchestrati con Kubernetes
-2. Implementazione di strategie di resilienza come Circuit Breaker
-3. Configurazione di monitoring avanzato con Prometheus e Grafana
-4. Utilizzo di un API Gateway per gestire il traffico esterno
+1. Using Docker containers orchestrated with Kubernetes
+2. Implementing resilience strategies like Circuit Breaker
+3. Configuring advanced monitoring with Prometheus and Grafana
+4. Using an API Gateway to manage external traffic
 
 ## Roadmap
 
-- **Q2 2025**: Implementazione di autenticazione con provider esterni (Google, Microsoft)
-- **Q3 2025**: Dashboard di amministrazione avanzata
-- **Q4 2025**: Supporto per temi personalizzati e white-labeling
-- **Q1 2026**: API pubbliche con documentazione OpenAPI
+- **Q2 2025**: Implementation of authentication with external providers (Google, Microsoft)
+- **Q3 2025**: Advanced administration dashboard
+- **Q4 2025**: Support for custom themes and white-labeling
+- **Q1 2026**: Public APIs with OpenAPI documentation
 
 ## Troubleshooting
 
-### Problemi Comuni
+### Common Issues
 
-#### Errori di Autenticazione
-- Verifica che i cookie siano abilitati nel browser
-- Controlla la validità e la scadenza dei token di refresh
-- Verifica che le policy di CORS siano configurate correttamente
+#### Authentication Errors
+- Verify that cookies are enabled in the browser
+- Check the validity and expiration of refresh tokens
+- Verify that CORS policies are properly configured
 
-#### Problemi di Connessione tra Servizi
-- Verifica che tutti i servizi siano in esecuzione dal dashboard di Aspire
-- Controlla i log per errori di comunicazione
-- Verifica che le configurazioni di rete permettano la comunicazione tra i servizi
+#### Connection Issues Between Services
+- Verify that all services are running from the Aspire dashboard
+- Check logs for communication errors
+- Verify that network configurations allow communication between services
 
-## Contribuire al Progetto
+## Contributing to the Project
 
-Per contribuire al progetto, segui questi passaggi:
+To contribute to the project, follow these steps:
 
-1. Crea un fork del repository
-2. Crea un branch per la tua funzionalità (`git checkout -b feature/amazing-feature`)
-3. Committa le tue modifiche (`git commit -m 'Aggiunta una nuova funzionalità'`)
-4. Pusha il branch (`git push origin feature/amazing-feature`)
-5. Apri una Pull Request
+1. Create a fork of the repository
+2. Create a branch for your feature (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add a new feature'`)
+4. Push the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-### Linee Guida per il Codice
+### Code Guidelines
 
-- Segui le convenzioni di naming di C#
-- Aggiungi test unitari per le nuove funzionalità
-- Documenta le API e le funzionalità complesse
-- Utilizza il pattern Result per la gestione degli errori
+- Follow C# naming conventions
+- Add unit tests for new features
+- Document APIs and complex functionality
+- Use the Result pattern for error handling
 
-## Licenza
+## License
 
-[Inserisci la tua licenza qui]
+[Insert your license here]
 
 ---
 
-*Questo README è stato aggiornato il 21 aprile 2025*
+*This README was last updated on April 24, 2025*
