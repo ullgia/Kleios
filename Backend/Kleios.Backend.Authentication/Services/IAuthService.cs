@@ -12,6 +12,7 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using Kleios.Shared.Authorization;
+using Kleios.Shared.Settings;
 
 namespace Kleios.Backend.Authentication.Services;
 
@@ -27,21 +28,24 @@ public class AuthService : IAuthService
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly RoleManager<ApplicationRole> _roleManager;
     private readonly KleiosDbContext _dbContext;
-    private readonly IConfigurationManagerService _configManager;
     private readonly ILogger<AuthService> _logger;
+    private readonly JwtSettingsModel _jwtSettings;
 
     public AuthService(
         UserManager<ApplicationUser> userManager,
         RoleManager<ApplicationRole> roleManager,
         KleiosDbContext dbContext,
-        IConfigurationManagerService configManager,
-        ILogger<AuthService> logger)
+        ILogger<AuthService> logger,
+        IConfiguration configuration)
     {
         _userManager = userManager;
         _roleManager = roleManager;
         _dbContext = dbContext;
-        _configManager = configManager;
         _logger = logger;
+        
+        // Ottiene le impostazioni JWT dalla configurazione
+        _jwtSettings = new JwtSettingsModel();
+        configuration.GetSection("JwtSettings").Bind(_jwtSettings);
     }
 
     /// <summary>
@@ -280,14 +284,15 @@ public class AuthService : IAuthService
             }
         }
 
-        // Utilizza JwtConfig per ottenere le credenziali di firma
-        var creds = JwtConfig.GetSigningCredentials();
+        // Utilizza _jwtSettings per ottenere le credenziali di firma
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.SecretKey));
+        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-        // Crea il token utilizzando le impostazioni da JwtConfig
-        var expires = DateTime.UtcNow.AddMinutes(JwtConfig.TokenValidityInMinutes);
+        // Crea il token utilizzando le impostazioni da _jwtSettings
+        var expires = DateTime.UtcNow.AddMinutes(_jwtSettings.TokenValidityInMinutes);
         var token = new JwtSecurityToken(
-            issuer: JwtConfig.Issuer,
-            audience: JwtConfig.Audience,
+            issuer: _jwtSettings.Issuer,
+            audience: _jwtSettings.Audience,
             claims: claims,
             expires: expires,
             signingCredentials: creds
@@ -311,7 +316,7 @@ public class AuthService : IAuthService
         var refreshToken = new RefreshToken
         {
             Token = token,
-            ExpiryDate = DateTime.UtcNow.AddDays(JwtConfig.RefreshTokenValidityInDays),
+            ExpiryDate = DateTime.UtcNow.AddDays(_jwtSettings.RefreshTokenValidityInDays),
             CreatedByIp = ipAddress,
             UserAgent = userAgent
         };

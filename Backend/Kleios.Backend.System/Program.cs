@@ -7,6 +7,7 @@ using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Kleios.Backend.Shared;
+using Kleios.Backend.SharedInfrastructure.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,38 +24,6 @@ builder.Services.AddKleiosDatabase(useInMemoryDatabase: true);
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<ISettingsService, SettingsService>();
-builder.Services.AddSingleton<IConfigurationManagerService, ConfigurationManagerService>();
-
-// Inizializza il servizio di configurazione per ottenere i parametri JWT dal database
-var serviceProvider = builder.Services.BuildServiceProvider();
-var configManager = serviceProvider.GetRequiredService<IConfigurationManagerService>();
-configManager.InitializeAsync().GetAwaiter().GetResult();
-var jwtConfig = configManager.GetJwtConfig();
-
-// Configura l'autenticazione JWT con i parametri dal database
-builder.Services.AddAuthentication(options =>
-{
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
-}).AddJwtBearer(options =>
-{
-    options.SaveToken = true;
-    options.RequireHttpsMetadata = false;
-    options.TokenValidationParameters = new TokenValidationParameters
-    {
-        ValidateIssuer = true,
-        ValidateAudience = true,
-        ValidateLifetime = true,
-        ValidateIssuerSigningKey = true,
-        RequireExpirationTime = true,
-        RequireSignedTokens = true,
-        ValidIssuer = jwtConfig.Issuer,
-        ValidAudience = jwtConfig.Audience,
-        IssuerSigningKey = jwtConfig.GetSigningKey(),
-        ClockSkew = TimeSpan.FromMinutes(5)
-    };
-});
 
 // Configura l'autorizzazione
 builder.Services.AddAuthorization(options =>

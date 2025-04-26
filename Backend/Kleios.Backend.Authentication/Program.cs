@@ -18,36 +18,10 @@ builder.AddKleiosValidation();
 builder.Services.AddDatabaseSeeder();
 builder.Services.AddKleiosDatabase(useInMemoryDatabase:true);
 
-// Registra i servizi di configurazione e autenticazione
-builder.Services.AddScoped<ISettingsService, SettingsService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 
 // Inizializza il servizio di configurazione per ottenere i parametri JWT dal database
 
-// Configura l'autenticazione JWT con i parametri dal database
-builder.Services.AddAuthentication(options =>
-{
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
-}).AddJwtBearer(options =>
-{
-    options.SaveToken = true;
-    options.RequireHttpsMetadata = false;
-    options.TokenValidationParameters = new TokenValidationParameters
-    {
-        ValidateIssuer = true,
-        ValidateAudience = true,
-        ValidateLifetime = true,
-        ValidateIssuerSigningKey = true,
-        RequireExpirationTime = true,
-        RequireSignedTokens = true,
-        ValidIssuer = jwtConfig.Issuer,
-        ValidAudience = jwtConfig.Audience,
-        IssuerSigningKey = jwtConfig.GetSigningKey(),
-        ClockSkew = TimeSpan.FromMinutes(5)
-    };
-});
 
 // Configura l'autorizzazione
 builder.Services.AddAuthorization(options =>

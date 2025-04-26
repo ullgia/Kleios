@@ -135,7 +135,7 @@ public class SettingsService : ISettingsService
         
         return Option.Success();
     }
-    
+
     // Metodo helper per mappare AppSetting a SettingMetadata
     private static SettingMetadata MapToSettingMetadata(AppSetting setting)
     {

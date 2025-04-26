@@ -64,4 +64,11 @@ public class SettingMetadata
     /// Valore corrente dell'impostazione
     /// </summary>
     public string Value { get; set; } = string.Empty;
+
+
+    /// <summary>
+    /// Categoria dell'impostazione
+    /// </summary>
+
+    public string Category { get; set; } = string.Empty;
 }

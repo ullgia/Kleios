@@ -117,14 +117,16 @@ public static class SettingsExtensions
         }
     }
     
-    private static Type GetModelTypeByName(AppSettingsModel model, string sectionName)
+    private static Type? GetModelTypeByName(AppSettingsModel model, string sectionName)
     {
         var property = typeof(AppSettingsModel).GetProperty(sectionName);
         return property?.PropertyType;
     }
     
-    private static bool IsSimpleType(Type type)
+    private static bool IsSimpleType(Type? type)
     {
+        if (type == null) return false;
+        
         return type.IsPrimitive 
                || type == typeof(string) 
                || type == typeof(decimal) 
