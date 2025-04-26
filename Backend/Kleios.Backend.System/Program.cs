@@ -18,6 +18,20 @@ builder.AddServiceDefaults();
 builder.AddKleiosValidation();
 builder.Services.AddDatabaseSeeder();
 builder.Services.AddKleiosDatabase(useInMemoryDatabase: true);
+
+// Registra i servizi del modulo System
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IRoleService, RoleService>();
+builder.Services.AddScoped<ISettingsService, SettingsService>();
+builder.Services.AddSingleton<IConfigurationManagerService, ConfigurationManagerService>();
+
+// Inizializza il servizio di configurazione per ottenere i parametri JWT dal database
+var serviceProvider = builder.Services.BuildServiceProvider();
+var configManager = serviceProvider.GetRequiredService<IConfigurationManagerService>();
+configManager.InitializeAsync().GetAwaiter().GetResult();
+var jwtConfig = configManager.GetJwtConfig();
+
+// Configura l'autenticazione JWT con i parametri dal database
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -27,13 +41,21 @@ builder.Services.AddAuthentication(options =>
 {
     options.SaveToken = true;
     options.RequireHttpsMetadata = false;
-    options.TokenValidationParameters = JwtConfig.GetTokenValidationParameters();
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        RequireExpirationTime = true,
+        RequireSignedTokens = true,
+        ValidIssuer = jwtConfig.Issuer,
+        ValidAudience = jwtConfig.Audience,
+        IssuerSigningKey = jwtConfig.GetSigningKey(),
+        ClockSkew = TimeSpan.FromMinutes(5)
+    };
 });
 
-// Registra i servizi del modulo System
-builder.Services.AddScoped<IUserService, UserService>();
-builder.Services.AddScoped<IRoleService, RoleService>();
-builder.Services.AddScoped<ISettingsService, SettingsService>();
 // Configura l'autorizzazione
 builder.Services.AddAuthorization(options =>
 {
@@ -57,6 +79,7 @@ builder.Services.AddAuthorization(options =>
         }
     }
 });
+
 // Add Controllers
 builder.Services.AddControllers();
 

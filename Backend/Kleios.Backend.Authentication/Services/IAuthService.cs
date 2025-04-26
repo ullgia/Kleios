@@ -27,20 +27,20 @@ public class AuthService : IAuthService
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly RoleManager<ApplicationRole> _roleManager;
     private readonly KleiosDbContext _dbContext;
-    private readonly IConfiguration _configuration;
+    private readonly IConfigurationManagerService _configManager;
     private readonly ILogger<AuthService> _logger;
 
     public AuthService(
         UserManager<ApplicationUser> userManager,
         RoleManager<ApplicationRole> roleManager,
         KleiosDbContext dbContext,
-        IConfiguration configuration,
+        IConfigurationManagerService configManager,
         ILogger<AuthService> logger)
     {
         _userManager = userManager;
         _roleManager = roleManager;
         _dbContext = dbContext;
-        _configuration = configuration;
+        _configManager = configManager;
         _logger = logger;
     }
 
