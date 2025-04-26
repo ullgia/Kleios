@@ -43,7 +43,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{582FDB09
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kleios.Frontend.Tests", "Frontend\Tests\Kleios.Frontend.Tests\Kleios.Frontend.Tests.csproj", "{F11C2682-EA0B-40A2-AD4E-DC4FC9567BDB}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kleios.Backend.SystemAdmin", "Backend\Kleios.Backend.System\Kleios.Backend.SystemAdmin.csproj", "{D9DADEFB-B55F-4FC9-AE73-DB49C0F2166F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kleios.Backend.SystemAdmin", "Backend\Kleios.Backend.SystemAdmin\Kleios.Backend.SystemAdmin.csproj", "{D9DADEFB-B55F-4FC9-AE73-DB49C0F2166F}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kleios.Modules.System", "Frontend\Modules\Kleios.Modules.System\Kleios.Modules.System.csproj", "{FC1203EC-4681-4989-B8DE-787C20104427}"
 EndProject
