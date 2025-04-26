@@ -20,14 +20,9 @@ builder.Services.AddKleiosDatabase(useInMemoryDatabase:true);
 
 // Registra i servizi di configurazione e autenticazione
 builder.Services.AddScoped<ISettingsService, SettingsService>();
-builder.Services.AddSingleton<IConfigurationManagerService, ConfigurationManagerService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 
 // Inizializza il servizio di configurazione per ottenere i parametri JWT dal database
-var serviceProvider = builder.Services.BuildServiceProvider();
-var configManager = serviceProvider.GetRequiredService<IConfigurationManagerService>();
-configManager.InitializeAsync().GetAwaiter().GetResult();
-var jwtConfig = configManager.GetJwtConfig();
 
 // Configura l'autenticazione JWT con i parametri dal database
 builder.Services.AddAuthentication(options =>
