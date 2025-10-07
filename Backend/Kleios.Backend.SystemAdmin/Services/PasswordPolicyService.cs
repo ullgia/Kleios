@@ -26,17 +26,20 @@ public class PasswordPolicyService : IPasswordPolicyService
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ILogger<PasswordPolicyService> _logger;
     private readonly ISettingsService _settingsService;
+    private readonly IEmailService _emailService;
 
     public PasswordPolicyService(
         KleiosDbContext context,
         UserManager<ApplicationUser> userManager,
         ILogger<PasswordPolicyService> logger,
-        ISettingsService settingsService)
+        ISettingsService settingsService,
+        IEmailService emailService)
     {
         _context = context;
         _userManager = userManager;
         _logger = logger;
         _settingsService = settingsService;
+        _emailService = emailService;
     }
 
     public async Task<PasswordPolicyDto> GetPasswordPolicyAsync()
@@ -227,10 +230,19 @@ public class PasswordPolicyService : IPasswordPolicyService
 
         var token = await _userManager.GeneratePasswordResetTokenAsync(user);
         
-        // TODO: Invia email con il token
-        _logger.LogInformation("Token di reset password generato per l'utente {UserId}: {Token}", user.Id, token);
+        // Invia email con il token tramite EmailService
+        var emailSent = await _emailService.SendPasswordResetEmailAsync(email, user.UserName ?? email, token);
         
-        return true;
+        if (emailSent)
+        {
+            _logger.LogInformation("Email di reset password inviata con successo per l'utente {UserId}", user.Id);
+        }
+        else
+        {
+            _logger.LogWarning("Impossibile inviare l'email di reset password per l'utente {UserId}", user.Id);
+        }
+        
+        return emailSent;
     }
 
     public async Task<bool> ResetPasswordAsync(ConfirmResetPasswordRequest request)

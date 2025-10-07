@@ -13,9 +13,9 @@ namespace Kleios.Backend.Authentication.Controllers;
 [Route("api/[controller]")]
 public class AuthController : ControllerBase
 {
-    private readonly IAuthService _authService;
+    private readonly IBackendAuthService _authService;
 
-    public AuthController(IAuthService authService)
+    public AuthController(IBackendAuthService authService)
     {
         _authService = authService;
     }

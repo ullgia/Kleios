@@ -21,6 +21,7 @@ builder.Services.AddKleiosCors(builder.Configuration);
 builder.AddServiceDefaults();
 builder.AddKleiosValidation();
 builder.Services.AddDatabaseSeeder();
+builder.Services.AddSharedInfrastructure();
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 var useInMemory = string.IsNullOrEmpty(connectionString);
@@ -34,7 +35,7 @@ else
     builder.Services.AddKleiosDatabase(connectionString: connectionString);
 }
 
-builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IBackendAuthService, AuthService>();
 builder.Services.AddKleiosAuthorization();
 
 builder.Services.AddKleiosHealthChecks(builder.Configuration);

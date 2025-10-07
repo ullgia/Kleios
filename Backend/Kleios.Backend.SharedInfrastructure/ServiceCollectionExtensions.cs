@@ -27,6 +27,9 @@ public static class ServiceCollectionExtensions
         // Registra il servizio SettingsService
         services.AddScoped<ISettingsService, SettingsService>();
         
+        // Registra il servizio EmailService
+        services.AddScoped<IEmailService, EmailService>();
+        
         return services;
     }
 
@@ -58,8 +61,8 @@ public static class ServiceCollectionExtensions
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        var healthChecksBuilder = services.AddHealthChecks()
-            .AddCheck("self", () => HealthCheckResult.Healthy("Service is running"));
+        // Nota: il check "self" è già aggiunto da AddDefaultHealthChecks() nei ServiceDefaults di Aspire
+        var healthChecksBuilder = services.AddHealthChecks();
 
         // Aggiungi SQL Server health check se connection string presente
         var connectionString = configuration.GetConnectionString("DefaultConnection");
@@ -99,6 +102,12 @@ public static class ServiceCollectionExtensions
         
         // Gestione centralizzata degli errori
         app.UseErrorHandling();
+        
+        // Audit Logging (dopo error handling, prima di routing)
+        app.UseAuditLogging();
+        
+        // Routing (necessario prima di authentication/authorization)
+        app.UseRouting();
         
         // Configurazione dell'autenticazione
         app.UseAuthentication();

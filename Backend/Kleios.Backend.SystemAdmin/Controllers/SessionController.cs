@@ -108,8 +108,17 @@ public class SessionController : ControllerBase
                 return Unauthorized("Utente non autenticato");
             }
 
-            // TODO: Ottenere l'ID della sessione corrente dal token
-            var success = await _sessionService.TerminateAllSessionsAsync(userId);
+            // Ottieni l'ID della sessione corrente dal token JWT (claim "jti")
+            var currentJwtId = User.FindFirst("jti")?.Value;
+            Guid? currentSessionJwtId = null;
+            
+            if (!string.IsNullOrEmpty(currentJwtId) && Guid.TryParse(currentJwtId, out var jwtGuid))
+            {
+                currentSessionJwtId = jwtGuid;
+                _logger.LogDebug("Sessione corrente identificata: JwtId={JwtId}", currentJwtId);
+            }
+            
+            var success = await _sessionService.TerminateAllSessionsAsync(userId, currentSessionJwtId);
             
             if (success)
             {

@@ -19,6 +19,11 @@ public class UserSession : BaseEntity
     public bool IsActive { get; set; } = true;
     public string SessionToken { get; set; } = string.Empty;
     
+    /// <summary>
+    /// JWT ID (claim "jti") per correlare la sessione con il token JWT
+    /// </summary>
+    public Guid? JwtId { get; set; }
+    
     // Navigation property
     public virtual ApplicationUser? User { get; set; }
 }

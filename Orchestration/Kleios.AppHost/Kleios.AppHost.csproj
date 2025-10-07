@@ -15,8 +15,14 @@
     <PackageReference Include="Aspire.Hosting.AppHost" Version="9.2.1" />
     <ProjectReference Include="..\..\Backend\Kleios.Backend.Authentication\Kleios.Backend.Authentication.csproj" />
     <ProjectReference Include="..\..\Backend\Kleios.Backend.SystemAdmin\Kleios.Backend.SystemAdmin.csproj" />
-    <ProjectReference Include="..\..\Frontend\Host\Kleios.Host.csproj" />
     <ProjectReference Include="..\Kleios.ServiceDefaults\Kleios.ServiceDefaults.csproj" IsAspireProjectResource="false" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Frontend\Gateway\Kleios.Gateway\Kleios.Gateway.csproj" />
+    <ProjectReference Include="..\..\Frontend\Shell\Kleios.Frontend.Shell.csproj" />
+    <ProjectReference Include="..\..\Frontend\Modules\Kleios.Modules.Auth.Host\Kleios.Modules.Auth.Host.csproj" />
+    <ProjectReference Include="..\..\Frontend\Modules\Kleios.Modules.System.Host\Kleios.Modules.System.Host.csproj" />
   </ItemGroup>
 
 </Project>

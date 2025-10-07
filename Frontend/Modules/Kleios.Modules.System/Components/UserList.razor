@@ -201,7 +201,7 @@
         var dialog = await DialogService.ShowAsync<CreateUserDialog>("Crea Nuovo Utente", parameters, options);
         var result = await dialog.Result;
 
-        if (!result.Canceled && result.Data is CreateUserRequest createRequest)
+        if (result is not null && !result.Canceled && result.Data is CreateUserRequest createRequest)
         {
             await CreateUser(createRequest);
         }
@@ -220,7 +220,7 @@
             }
             else
             {
-                Snackbar.Add($"Errore: {result.Message}", Severity.Error);
+                Snackbar.Add($"Errore: {result.Message ?? "Errore sconosciuto"}", Severity.Error);
             }
         }
         catch (Exception ex)
@@ -247,7 +247,7 @@
         var dialog = await DialogService.ShowAsync<EditUserDialog>($"Modifica Utente: {user.Username}", parameters, options);
         var result = await dialog.Result;
 
-        if (!result.Canceled && result.Data is UpdateUserRequest updateRequest)
+        if (result is not null && !result.Canceled && result.Data is UpdateUserRequest updateRequest)
         {
             await UpdateUser(user.Id, updateRequest);
         }
@@ -266,7 +266,7 @@
             }
             else
             {
-                Snackbar.Add($"Errore: {result.Message}", Severity.Error);
+                Snackbar.Add($"Errore: {result.Message ?? "Errore sconosciuto"}", Severity.Error);
             }
         }
         catch (Exception ex)
@@ -291,7 +291,7 @@
         var dialog = await DialogService.ShowAsync<DeleteUserDialog>("Conferma Eliminazione", parameters, options);
         var result = await dialog.Result;
 
-        if (!result.Canceled)
+        if (result is not null && !result.Canceled)
         {
             await DeleteUser(user.Id);
         }
@@ -310,7 +310,7 @@
             }
             else
             {
-                Snackbar.Add($"Errore: {result.Message}", Severity.Error);
+                Snackbar.Add($"Errore: {result.Message ?? "Errore sconosciuto"}", Severity.Error);
             }
         }
         catch (Exception ex)

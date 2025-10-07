@@ -77,7 +77,7 @@ public class AuthenticatedHttpMessageHandler : DelegatingHandler
         var userId = GetCurrentUserId();
         if (userId == Guid.Empty)
         {
-            _logger.LogWarning("Impossibile ottenere l'ID utente corrente");
+            _logger.LogDebug("Nessun utente autenticato nel contesto HTTP corrente, skip authentication header");
             return;
         }
         
@@ -100,11 +100,20 @@ public class AuthenticatedHttpMessageHandler : DelegatingHandler
     
     /// <summary>
     /// Ottiene l'ID utente corrente dal contesto HTTP
+    /// Gestisce il caso in cui HttpContext sia null (es. background services)
     /// </summary>
     private Guid GetCurrentUserId()
     {
         var httpContext = _httpContextAccessor.HttpContext;
-        if (httpContext?.User?.Identity?.IsAuthenticated == true)
+        
+        // HttpContext può essere null in background services o fuori da richieste HTTP
+        if (httpContext == null)
+        {
+            _logger.LogTrace("HttpContext è null - probabile esecuzione in background service");
+            return Guid.Empty;
+        }
+        
+        if (httpContext.User?.Identity?.IsAuthenticated == true)
         {
             var userIdClaim = httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
             if (userIdClaim != null && Guid.TryParse(userIdClaim.Value, out var userId))

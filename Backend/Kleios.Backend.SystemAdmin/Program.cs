@@ -21,6 +21,7 @@ builder.Services.AddKleiosCors(builder.Configuration);
 builder.AddServiceDefaults();
 builder.AddKleiosValidation();
 builder.Services.AddDatabaseSeeder();
+builder.Services.AddSharedInfrastructure();
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 var useInMemory = string.IsNullOrEmpty(connectionString);

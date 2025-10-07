@@ -16,14 +16,18 @@ using Kleios.Shared.Settings;
 
 namespace Kleios.Backend.Authentication.Services;
 
-public interface IAuthService
+/// <summary>
+/// Interfaccia per il servizio di autenticazione backend
+/// Nota: Rinominata da IAuthService per evitare conflitti con Frontend.IFrontendAuthService
+/// </summary>
+public interface IBackendAuthService
 {
     Task<Option<AuthResponse>> LoginAsync(LoginRequest request, string ipAddress, string userAgent);
     Task<Option<AuthResponse>> RefreshTokenAsync(string requestRefreshToken, string ipAddress, string userAgent);
     Task<Option<string>> GetSecurityStampAsync(string userId);
 }
 
-public class AuthService : IAuthService
+public class AuthService : IBackendAuthService
 {
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly RoleManager<ApplicationRole> _roleManager;

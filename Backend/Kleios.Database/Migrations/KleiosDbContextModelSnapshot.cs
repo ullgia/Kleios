@@ -685,6 +685,9 @@ namespace Kleios.Database.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
+                    b.Property<Guid?>("JwtId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime>("LastActivity")
                         .HasColumnType("datetime2");
 

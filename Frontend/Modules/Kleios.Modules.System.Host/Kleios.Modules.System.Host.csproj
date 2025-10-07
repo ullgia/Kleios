@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MudBlazor" Version="8.13.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Kleios.Modules.System\Kleios.Modules.System.csproj" />
+    <ProjectReference Include="..\..\Shared\Kleios.Frontend.Shared\Kleios.Frontend.Shared.csproj" />
+    <ProjectReference Include="..\..\Shared\Kleios.Frontend.Components\Kleios.Frontend.Components.csproj" />
+    <ProjectReference Include="..\..\..\Shared\Kleios.Shared\Kleios.Shared.csproj" />
+    <ProjectReference Include="..\..\Infrastructure\Kleios.Frontend.Infrastructure\Kleios.Frontend.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

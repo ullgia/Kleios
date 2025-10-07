@@ -28,6 +28,27 @@ public class MenuService : Kleios.Frontend.Shared.Services.IMenuService
             },
             new MenuItem
             {
+                Title = "Autenticazione",
+                Icon = "fas fa-sign-in-alt",
+                IsDefaultOpen = false,
+                SubMenus = new List<MenuItem>
+                {
+                    new MenuItem
+                    {
+                        Title = "Login",
+                        Icon = "fas fa-sign-in-alt",
+                        Href = "/auth/Account/Login"
+                    },
+                    new MenuItem
+                    {
+                        Title = "Registrazione",
+                        Icon = "fas fa-user-plus",
+                        Href = "/auth/register"
+                    }
+                }
+            },
+            new MenuItem
+            {
                 Title = "Amministrazione",
                 Icon = "fas fa-cogs",
                 IsDefaultOpen = false,
@@ -37,21 +58,42 @@ public class MenuService : Kleios.Frontend.Shared.Services.IMenuService
                     {
                         Title = "Gestione Utenti",
                         Icon = "fas fa-users",
-                        Href = "/System/Users",
+                        Href = "/system/System/Users",
                         Policy = AppPermissions.Users.View
+                    },
+                    new MenuItem
+                    {
+                        Title = "Gestione Ruoli",
+                        Icon = "fas fa-user-shield",
+                        Href = "/system/System/Roles",
+                        Policy = AppPermissions.Roles.View
                     },
                     new MenuItem
                     {
                         Title = "Impostazioni",
                         Icon = "fas fa-cog",
-                        Href = "/System/Settings",
+                        Href = "/system/System/Settings",
                         Policy = AppPermissions.Settings.View
                     },
                     new MenuItem
                     {
-                        Title = "Logs di Sistema",
+                        Title = "Policy Password",
+                        Icon = "fas fa-key",
+                        Href = "/system/System/PasswordPolicy",
+                        Policy = AppPermissions.Settings.View
+                    },
+                    new MenuItem
+                    {
+                        Title = "Sessioni Attive",
+                        Icon = "fas fa-desktop",
+                        Href = "/system/System/ActiveSessions",
+                        Policy = AppPermissions.Users.View
+                    },
+                    new MenuItem
+                    {
+                        Title = "Log Audit",
                         Icon = "fas fa-list",
-                        Href = "/System/Logs",
+                        Href = "/system/System/AuditLogs",
                         Policy = AppPermissions.Logs.View
                     }
                 }

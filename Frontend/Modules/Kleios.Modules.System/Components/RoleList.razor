@@ -184,7 +184,7 @@
         var dialog = await DialogService.ShowAsync<CreateRoleDialog>("Crea Nuovo Ruolo", parameters, options);
         var result = await dialog.Result;
 
-        if (!result.Canceled && result.Data is CreateRoleRequest createRequest)
+        if (result is not null && !result.Canceled && result.Data is CreateRoleRequest createRequest)
         {
             await CreateRole(createRequest);
         }
@@ -203,7 +203,7 @@
             }
             else
             {
-                Snackbar.Add($"Errore: {result.Message}", Severity.Error);
+                Snackbar.Add($"Errore: {result.Message ?? "Errore sconosciuto"}", Severity.Error);
             }
         }
         catch (Exception ex)
@@ -230,7 +230,7 @@
         var dialog = await DialogService.ShowAsync<EditRoleDialog>($"Modifica Ruolo: {role.Name}", parameters, options);
         var result = await dialog.Result;
 
-        if (!result.Canceled && result.Data is UpdateRoleRequest updateRequest)
+        if (result is not null && !result.Canceled && result.Data is UpdateRoleRequest updateRequest)
         {
             await UpdateRole(role.Id, updateRequest);
         }
@@ -249,7 +249,7 @@
             }
             else
             {
-                Snackbar.Add($"Errore: {result.Message}", Severity.Error);
+                Snackbar.Add($"Errore: {result.Message ?? "Errore sconosciuto"}", Severity.Error);
             }
         }
         catch (Exception ex)
@@ -274,7 +274,7 @@
         var dialog = await DialogService.ShowAsync<DeleteRoleDialog>("Conferma Eliminazione", parameters, options);
         var result = await dialog.Result;
 
-        if (!result.Canceled)
+        if (result is not null && !result.Canceled)
         {
             await DeleteRole(role.Id);
         }
@@ -293,7 +293,7 @@
             }
             else
             {
-                Snackbar.Add($"Errore: {result.Message}", Severity.Error);
+                Snackbar.Add($"Errore: {result.Message ?? "Errore sconosciuto"}", Severity.Error);
             }
         }
         catch (Exception ex)

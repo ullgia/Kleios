@@ -126,9 +126,16 @@ public class SessionManagementService : ISessionManagementService
             .Where(s => s.UserId == userId && s.IsActive)
             .ToListAsync();
 
+        // Se exceptSessionId è fornito, è il JwtId (claim "jti") della sessione corrente
         if (exceptSessionId.HasValue)
         {
-            sessions = sessions.Where(s => s.Id != exceptSessionId.Value).ToList();
+            // Filtra per JwtId se presente, altrimenti per Id (fallback)
+            sessions = sessions.Where(s => 
+                (s.JwtId.HasValue && s.JwtId.Value != exceptSessionId.Value) || 
+                (!s.JwtId.HasValue && s.Id != exceptSessionId.Value)
+            ).ToList();
+            
+            _logger.LogDebug("Esclusa sessione corrente con JwtId={JwtId} dalla terminazione", exceptSessionId);
         }
 
         foreach (var session in sessions)
@@ -259,9 +266,41 @@ public class SessionManagementService : ISessionManagementService
 
     private async Task<string> GetLocationFromIpAsync(string ipAddress)
     {
-        // TODO: Implementare la geolocalizzazione dell'IP
-        // Per ora restituisce una stringa placeholder
-        await Task.CompletedTask;
-        return "Unknown";
+        // Implementazione geolocalizzazione IP con fallback sicuro
+        try
+        {
+            // Per produzione considera: ip-api.com (free 45 req/min), ipapi.co, ipgeolocation.io
+            // Per ora implementiamo con ip-api.com (free tier)
+            
+            // Verifica IP valido (no localhost/private)
+            if (string.IsNullOrEmpty(ipAddress) || 
+                ipAddress == "::1" || 
+                ipAddress.StartsWith("127.") || 
+                ipAddress.StartsWith("192.168.") ||
+                ipAddress.StartsWith("10.") ||
+                ipAddress.StartsWith("172."))
+            {
+                return "Local Network";
+            }
+
+            using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(3) };
+            var response = await httpClient.GetStringAsync($"http://ip-api.com/json/{ipAddress}?fields=status,country,regionName,city");
+            
+            var json = System.Text.Json.JsonDocument.Parse(response);
+            if (json.RootElement.GetProperty("status").GetString() == "success")
+            {
+                var country = json.RootElement.GetProperty("country").GetString();
+                var region = json.RootElement.GetProperty("regionName").GetString();
+                var city = json.RootElement.GetProperty("city").GetString();
+                return $"{city}, {region}, {country}";
+            }
+            
+            return "Unknown";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Errore durante la geolocalizzazione dell'IP {IpAddress}", ipAddress);
+            return "Unknown";
+        }
     }
 }

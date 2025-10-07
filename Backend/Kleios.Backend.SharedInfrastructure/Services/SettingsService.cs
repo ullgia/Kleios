@@ -142,7 +142,7 @@ public class SettingsService : ISettingsService
         return new SettingMetadata
         {
             Key = setting.Key,
-            Value = setting.Value,
+            Value = setting.Value ?? string.Empty,
             Description = setting.Description,
             DataType = setting.DataType,
             IsRequired = setting.IsRequired,

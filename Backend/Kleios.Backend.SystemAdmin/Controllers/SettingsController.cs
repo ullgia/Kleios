@@ -58,7 +58,7 @@ public class SettingsController : ControllerBase
             return BadRequest(ModelState);
         }
         
-        var result = await _settingsService.UpdateSettingAsync(key, model.Value);
+        var result = await _settingsService.UpdateSettingAsync(key, model.Value ?? string.Empty);
         return result.IsSuccess 
             ? Ok(result.Value) 
             : StatusCode((int)result.StatusCode, result.Message);
@@ -75,7 +75,7 @@ public class SettingsController : ControllerBase
         
         var result = await _settingsService.CreateSettingAsync(
             model.Key,
-            model.Value,
+            model.Value ?? string.Empty,
             model.Description,
             model.DataType,
             model.IsRequired,

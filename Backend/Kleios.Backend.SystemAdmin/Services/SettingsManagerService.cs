@@ -257,7 +257,7 @@ public class SettingsManagerService : ISettingsManagerService
                 if (container == null || prop == null) continue;
 
                 var value = prop.GetValue(container);
-                var stringValue = ConvertToString(value);
+                var stringValue = ConvertToString(value ?? string.Empty);
 
                 // Verifica se l'impostazione esiste già
                 var existingOption = await _settingsService.GetSettingByKeyAsync(attribute.Name);
@@ -325,7 +325,7 @@ public class SettingsManagerService : ISettingsManagerService
                 if (container == null || prop == null) continue;
 
                 var value = prop.GetValue(container);
-                var stringValue = ConvertToString(value);
+                var stringValue = ConvertToString(value ?? string.Empty);
 
                 // Verifica se l'impostazione esiste già
                 var existingOption = await _settingsService.GetSettingByKeyAsync(attribute.Name);
@@ -440,7 +440,7 @@ public class SettingsManagerService : ISettingsManagerService
     /// <summary>
     /// Ottiene tutte le proprietà con attributo Setting
     /// </summary>
-    private List<(string Path, PropertyInfo Property)> GetAllSettingProperties(object model = null, string path = "")
+    private List<(string Path, PropertyInfo Property)> GetAllSettingProperties(object? model = null, string path = "")
     {
         var result = new List<(string, PropertyInfo)>();
         model ??= _appSettings;
@@ -493,11 +493,11 @@ public class SettingsManagerService : ISettingsManagerService
     /// <summary>
     /// Ottiene il contenitore e la proprietà dato il percorso
     /// </summary>
-    private (object Container, PropertyInfo Property) GetPropertyContainer(string path)
+    private (object? Container, PropertyInfo? Property) GetPropertyContainer(string path)
     {
         var parts = path.Split('.');
-        object container = _appSettings;
-        PropertyInfo property = null;
+        object? container = _appSettings;
+        PropertyInfo? property = null;
 
         for (int i = 0; i < parts.Length; i++)
         {
@@ -545,7 +545,7 @@ public class SettingsManagerService : ISettingsManagerService
 
         if (IsSimpleType(value.GetType()))
         {
-            return value.ToString();
+            return value.ToString() ?? string.Empty;
         }
 
         // Per tipi complessi, serializza in JSON
@@ -555,7 +555,7 @@ public class SettingsManagerService : ISettingsManagerService
     /// <summary>
     /// Converte un valore stringa al tipo specificato
     /// </summary>
-    private object ConvertToType(string value, Type targetType)
+    private object? ConvertToType(string value, Type targetType)
     {
         if (string.IsNullOrEmpty(value))
         {
@@ -602,7 +602,7 @@ public class SettingsManagerService : ISettingsManagerService
         // Per tipi complessi, deserializza da JSON
         try
         {
-            return JsonSerializer.Deserialize(value, targetType);
+            return JsonSerializer.Deserialize(value, targetType) ?? GetDefaultValue(targetType);
         }
         catch
         {
@@ -613,7 +613,7 @@ public class SettingsManagerService : ISettingsManagerService
     /// <summary>
     /// Ottiene il valore di default per un tipo
     /// </summary>
-    private object GetDefaultValue(Type type)
+    private object? GetDefaultValue(Type type)
     {
         if (type.IsValueType)
         {
@@ -635,7 +635,7 @@ public class SettingsManagerService : ISettingsManagerService
             || type == typeof(TimeSpan)
             || type == typeof(Guid)
             || type.IsEnum
-            || (Nullable.GetUnderlyingType(type) != null && IsSimpleType(Nullable.GetUnderlyingType(type)));
+            || (Nullable.GetUnderlyingType(type) is Type underlyingType && IsSimpleType(underlyingType));
     }
 
     /// <summary>

@@ -238,7 +238,7 @@
         var dialog = await DialogService.ShowAsync<CreateSettingDialog>("Crea Nuova Impostazione", parameters, options);
         var result = await dialog.Result;
 
-        if (!result.Canceled && result.Data is CreateSettingRequest createRequest)
+        if (result is not null && !result.Canceled && result.Data is CreateSettingRequest createRequest)
         {
             await CreateSetting(createRequest);
         }
@@ -257,7 +257,7 @@
             }
             else
             {
-                Snackbar.Add($"Errore: {result.Message}", Severity.Error);
+                Snackbar.Add($"Errore: {result.Message ?? "Errore sconosciuto"}", Severity.Error);
             }
         }
         catch (Exception ex)
@@ -283,7 +283,7 @@
         var dialog = await DialogService.ShowAsync<EditSettingDialog>($"Modifica: {setting.Key}", parameters, options);
         var result = await dialog.Result;
 
-        if (!result.Canceled && result.Data is UpdateSettingRequest updateRequest)
+        if (result is not null && !result.Canceled && result.Data is UpdateSettingRequest updateRequest)
         {
             await UpdateSetting(setting.Key, updateRequest);
         }
@@ -302,7 +302,7 @@
             }
             else
             {
-                Snackbar.Add($"Errore: {result.Message}", Severity.Error);
+                Snackbar.Add($"Errore: {result.Message ?? "Errore sconosciuto"}", Severity.Error);
             }
         }
         catch (Exception ex)
@@ -327,7 +327,7 @@
         var dialog = await DialogService.ShowAsync<DeleteSettingDialog>("Conferma Eliminazione", parameters, options);
         var result = await dialog.Result;
 
-        if (!result.Canceled)
+        if (result is not null && !result.Canceled)
         {
             await DeleteSetting(setting.Key);
         }
@@ -346,7 +346,7 @@
             }
             else
             {
-                Snackbar.Add($"Errore: {result.Message}", Severity.Error);
+                Snackbar.Add($"Errore: {result.Message ?? "Errore sconosciuto"}", Severity.Error);
             }
         }
         catch (Exception ex)

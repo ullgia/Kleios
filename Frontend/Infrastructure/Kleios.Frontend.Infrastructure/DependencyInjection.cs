@@ -45,18 +45,18 @@ public static class DependencyInjection
 
         // Configura HttpClient per AuthService con service discovery di Aspire
         // Non usiamo l'handler di autenticazione per evitare dipendenze circolari
-        services.AddHttpClient<IAuthService, AuthService>(client =>
+        services.AddHttpClient<IFrontendAuthService, AuthService>(client =>
         {
             // Usa service discovery schema con preferenza HTTPS 
             // Aspire sostituirà l'URL con l'endpoint corretto del servizio
-            client.BaseAddress = new Uri("https+http://auth-service");
+            client.BaseAddress = new Uri("https+http://auth-backend");
         });
 
         // Configura HttpClient per LogsSettingsService con service discovery di Aspire e autenticazione
-        ConfigureAuthenticatedHttpClient<ILogsSettingsService, LogsSettingsService>(services, "https+http://logs-settings-service");
+        ConfigureAuthenticatedHttpClient<ILogsSettingsService, LogsSettingsService>(services, "https+http://system-backend");
 
         // Configura HttpClient per SystemAdministrationService (ex UserStateManager) con service discovery di Aspire e autenticazione
-        ConfigureAuthenticatedHttpClient<ISystemAdministrationService, SystemAdministrationService>(services, "https+http://system-service");
+        ConfigureAuthenticatedHttpClient<ISystemAdministrationService, SystemAdministrationService>(services, "https+http://system-backend");
         
         // Registra il servizio di menu
         services.AddScoped<IMenuService, MenuService>();

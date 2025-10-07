@@ -40,6 +40,7 @@ public static class AuthenticationExtensions
                 OnTokenValidated = async context =>
                 {
                     // Qui possiamo eseguire validazioni aggiuntive sul token
+                    await Task.CompletedTask;
                 },
                 
                 OnMessageReceived = async context =>
