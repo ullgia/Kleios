@@ -1,14 +1,12 @@
-using System.Net;
+﻿using System.Net;
 using Kleios.Shared;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
 
 namespace Kleios.Backend.SharedInfrastructure.Middleware;
 
-/// <summary>
-/// Middleware per la gestione centralizzata delle eccezioni
-/// </summary>
 public class ErrorHandlingMiddleware
 {
     private readonly RequestDelegate _next;
@@ -28,7 +26,7 @@ public class ErrorHandlingMiddleware
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Si è verificata un'eccezione non gestita");
+            _logger.LogError(ex, "Si è verificata un''eccezione non gestita");
             await HandleExceptionAsync(context, ex);
         }
     }
@@ -54,5 +52,13 @@ public class ErrorHandlingMiddleware
         var jsonOptions = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
         
         await context.Response.WriteAsync(JsonSerializer.Serialize(result, jsonOptions));
+    }
+}
+
+public static class ErrorHandlingMiddlewareExtensions
+{
+    public static IApplicationBuilder UseErrorHandling(this IApplicationBuilder builder)
+    {
+        return builder.UseMiddleware<ErrorHandlingMiddleware>();
     }
 }

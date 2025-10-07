@@ -20,6 +20,16 @@ public class ApplicationUser : IdentityUser<Guid>
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     
     public DateTime? UpdatedAt { get; set; }
+    
+    /// <summary>
+    /// Data dell'ultimo cambio password
+    /// </summary>
+    public DateTime? LastPasswordChangeDate { get; set; }
+    
+    /// <summary>
+    /// Indica se l'utente deve cambiare la password al prossimo accesso
+    /// </summary>
+    public bool MustChangePassword { get; set; } = false;
 
     /// <summary>
     /// Collezione di refresh token associati all'utente

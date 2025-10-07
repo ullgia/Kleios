@@ -29,6 +29,10 @@ public class KleiosDbContext : IdentityDbContext<
     public DbSet<RolePermission> RolePermissions { get; set; }
     public DbSet<RefreshToken> RefreshTokens { get; set; }
     public DbSet<AppSetting> AppSettings { get; set; }
+    public DbSet<AuditLog> AuditLogs { get; set; }
+    public DbSet<UserSession> UserSessions { get; set; }
+    public DbSet<FailedLoginAttempt> FailedLoginAttempts { get; set; }
+    public DbSet<BlockedIp> BlockedIps { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

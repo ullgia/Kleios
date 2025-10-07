@@ -1,0 +1,177 @@
+@using Kleios.Shared.Models
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudForm @ref="_form" @bind-IsValid="@_isValid">
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="Role.Name" 
+                                  Label="Nome Ruolo" 
+                                  Disabled="true"
+                                  Variant="Variant.Outlined"
+                                  HelperText="Nome non modificabile" />
+                </MudItem>
+                
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_model.Description" 
+                                  Label="Descrizione" 
+                                  Lines="3"
+                                  Variant="Variant.Outlined" />
+                </MudItem>
+                
+                @if (Role.IsSystemRole)
+                {
+                    <MudItem xs="12">
+                        <MudAlert Severity="Severity.Info" Dense="true">
+                            Questo è un ruolo di sistema. I permessi non possono essere modificati.
+                        </MudAlert>
+                    </MudItem>
+                }
+                else
+                {
+                    <MudItem xs="12">
+                        <MudDivider />
+                        <MudText Typo="Typo.subtitle2" Class="mt-4 mb-2">
+                            <MudIcon Icon="@Icons.Material.Filled.Security" Size="Size.Small" Class="mr-1" />
+                            Permessi
+                        </MudText>
+                    </MudItem>
+                    
+                    <MudItem xs="12">
+                        @if (AllPermissions.Any())
+                        {
+                            <MudPaper Outlined="true" Class="pa-3" Style="max-height: 400px; overflow-y: auto;">
+                                @foreach (var group in GetPermissionGroups())
+                                {
+                                    <MudExpansionPanels MultiExpansion="true" Class="mb-2">
+                                        <MudExpansionPanel Text="@group.Key" IsInitiallyExpanded="true">
+                                            <MudStack>
+                                                @foreach (var permission in group.Value)
+                                                {
+                                                    <MudCheckBox T="bool" 
+                                                                 Label="@permission.Name"
+                                                                 Checked="@IsPermissionSelected(permission.Id)"
+                                                                 CheckedChanged="@((bool value) => TogglePermission(permission.Id, value))"
+                                                                 Color="Color.Primary">
+                                                        <MudText Typo="Typo.body2">@permission.Name</MudText>
+                                                        @if (!string.IsNullOrEmpty(permission.Description))
+                                                        {
+                                                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                                @permission.Description
+                                                            </MudText>
+                                                        }
+                                                    </MudCheckBox>
+                                                }
+                                            </MudStack>
+                                        </MudExpansionPanel>
+                                    </MudExpansionPanels>
+                                }
+                            </MudPaper>
+                            
+                            <MudText Typo="Typo.caption" Class="mt-2">
+                                @(_model.Permissions?.Count ?? 0) permessi selezionati
+                            </MudText>
+                        }
+                        else
+                        {
+                            <MudAlert Severity="Severity.Warning">Nessun permesso disponibile</MudAlert>
+                        }
+                    </MudItem>
+                }
+            </MudGrid>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Annulla</MudButton>
+        <MudButton Color="Color.Primary" 
+                   Variant="Variant.Filled" 
+                   OnClick="Submit"
+                   Disabled="@(!_isValid || _saving)">
+            @if (_saving)
+            {
+                <MudProgressCircular Class="mr-2" Size="Size.Small" Indeterminate="true" />
+            }
+            Salva Modifiche
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] 
+    IMudDialogInstance MudDialog { get; set; } = null!;
+    
+    [Parameter]
+    public RoleDto Role { get; set; } = null!;
+    
+    [Parameter]
+    public List<PermissionDto> AllPermissions { get; set; } = new();
+    
+    private MudForm _form = null!;
+    private bool _isValid;
+    private bool _saving;
+    private UpdateRoleRequest _model = new();
+
+    protected override void OnParametersSet()
+    {
+        _model = new UpdateRoleRequest
+        {
+            Description = Role.Description,
+            Permissions = Role.Permissions.Select(p => p.Id).ToList()
+        };
+    }
+
+    private Dictionary<string, List<PermissionDto>> GetPermissionGroups()
+    {
+        return AllPermissions
+            .GroupBy(p => GetPermissionCategory(p.SystemName))
+            .ToDictionary(g => g.Key, g => g.ToList());
+    }
+
+    private string GetPermissionCategory(string systemName)
+    {
+        var parts = systemName.Split('.');
+        return parts.Length > 0 ? parts[0] : "Altri";
+    }
+
+    private bool IsPermissionSelected(Guid permissionId)
+    {
+        return _model.Permissions?.Contains(permissionId) ?? false;
+    }
+
+    private void TogglePermission(Guid permissionId, bool isSelected)
+    {
+        _model.Permissions ??= new List<Guid>();
+        
+        if (isSelected)
+        {
+            if (!_model.Permissions.Contains(permissionId))
+            {
+                _model.Permissions.Add(permissionId);
+            }
+        }
+        else
+        {
+            _model.Permissions.Remove(permissionId);
+        }
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+
+    private async Task Submit()
+    {
+        await _form.Validate();
+        
+        if (!_isValid)
+        {
+            Snackbar.Add("Correggi gli errori nel form", Severity.Warning);
+            return;
+        }
+
+        _saving = true;
+        MudDialog.Close(DialogResult.Ok(_model));
+    }
+}

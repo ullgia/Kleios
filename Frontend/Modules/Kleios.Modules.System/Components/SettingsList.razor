@@ -1,0 +1,357 @@
+@page "/System/Settings"
+@using Kleios.Shared.Authorization
+@using Kleios.Shared.Models
+@using Kleios.Shared.Settings
+@using Kleios.Modules.System.Components.Settings
+@attribute [Authorize(Policy = AppPermissions.Settings.View)]
+@inject ISystemAdministrationService SystemService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<PageTitle>Gestione Impostazioni</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="my-4">
+    <MudCard Elevation="3">
+        <MudCardHeader>
+            <CardHeaderContent>
+                <MudText Typo="Typo.h4">Gestione Impostazioni</MudText>
+            </CardHeaderContent>
+            <CardHeaderActions>
+                <AuthorizeView Policy="@AppPermissions.Settings.Manage">
+                    <MudButton Variant="Variant.Filled" 
+                               Color="Color.Primary" 
+                               StartIcon="@Icons.Material.Filled.Add"
+                               OnClick="OpenCreateDialog">
+                        Nuova Impostazione
+                    </MudButton>
+                </AuthorizeView>
+            </CardHeaderActions>
+        </MudCardHeader>
+        <MudCardContent>
+            @if (_loading)
+            {
+                <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-4" />
+            }
+            else if (_error != null)
+            {
+                <MudAlert Severity="Severity.Error" Class="my-4">@_error</MudAlert>
+            }
+            else
+            {
+                @foreach (var category in GetCategories())
+                {
+                    <MudExpansionPanels MultiExpansion="true" Class="mb-3">
+                        <MudExpansionPanel Text="@category" IsInitiallyExpanded="true">
+                            <TitleContent>
+                                <div class="d-flex align-center">
+                                    <MudIcon Icon="@GetCategoryIcon(category)" Class="mr-2" />
+                                    <MudText Typo="Typo.h6">@category</MudText>
+                                    <MudChip T="string" Size="Size.Small" Class="ml-3">
+                                        @GetSettingsByCategory(category).Count() impostazioni
+                                    </MudChip>
+                                </div>
+                            </TitleContent>
+                            <ChildContent>
+                                <MudTable Items="@GetSettingsByCategory(category)" 
+                                          Hover="true" 
+                                          Dense="true"
+                                          Breakpoint="Breakpoint.Sm">
+                                    <HeaderContent>
+                                        <MudTh>Chiave</MudTh>
+                                        <MudTh>Valore</MudTh>
+                                        <MudTh>Descrizione</MudTh>
+                                        <MudTh>Tipo</MudTh>
+                                        <MudTh>Proprietà</MudTh>
+                                        <MudTh Style="text-align: right">Azioni</MudTh>
+                                    </HeaderContent>
+                                    <RowTemplate>
+                                        <MudTd DataLabel="Chiave">
+                                            <MudText Typo="Typo.body2">
+                                                <code>@context.Key</code>
+                                            </MudText>
+                                        </MudTd>
+                                        <MudTd DataLabel="Valore">
+                                            <MudText Typo="Typo.body2">@GetDisplayValue(context)</MudText>
+                                        </MudTd>
+                                        <MudTd DataLabel="Descrizione">
+                                            <MudText Typo="Typo.body2">@context.Description</MudText>
+                                        </MudTd>
+                                        <MudTd DataLabel="Tipo">
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Info">
+                                                @context.DataType
+                                            </MudChip>
+                                        </MudTd>
+                                        <MudTd DataLabel="Proprietà">
+                                            @if (context.IsRequired)
+                                            {
+                                                <MudChip T="string" Size="Size.Small" Color="Color.Warning" Class="mr-1">
+                                                    Obbligatorio
+                                                </MudChip>
+                                            }
+                                            @if (context.IsReadOnly)
+                                            {
+                                                <MudChip T="string" Size="Size.Small" Color="Color.Default">
+                                                    Sola lettura
+                                                </MudChip>
+                                            }
+                                        </MudTd>
+                                        <MudTd DataLabel="Azioni" Style="text-align: right">
+                                            <AuthorizeView Policy="@AppPermissions.Settings.Manage" Context="auth">
+                                                <MudButtonGroup Size="Size.Small" Variant="Variant.Outlined">
+                                                    @if (!context.IsReadOnly)
+                                                    {
+                                                        <MudIconButton Icon="@Icons.Material.Filled.Edit" 
+                                                                       Color="Color.Primary"
+                                                                       Size="Size.Small"
+                                                                       OnClick="@(() => OpenEditDialog(context))"
+                                                                       Title="Modifica" />
+                                                        <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                                                                       Color="Color.Error"
+                                                                       Size="Size.Small"
+                                                                       OnClick="@(() => OpenDeleteDialog(context))"
+                                                                       Title="Elimina" />
+                                                    }
+                                                    else
+                                                    {
+                                                        <MudIconButton Icon="@Icons.Material.Filled.Lock" 
+                                                                       Color="Color.Default"
+                                                                       Size="Size.Small"
+                                                                       Disabled="true"
+                                                                       Title="Sola lettura" />
+                                                    }
+                                                </MudButtonGroup>
+                                            </AuthorizeView>
+                                        </MudTd>
+                                    </RowTemplate>
+                                </MudTable>
+                            </ChildContent>
+                        </MudExpansionPanel>
+                    </MudExpansionPanels>
+                }
+            }
+        </MudCardContent>
+    </MudCard>
+</MudContainer>
+
+@code {
+    private List<SettingMetadata> _settings = new();
+    private bool _loading = true;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSettings();
+    }
+
+    private async Task LoadSettings()
+    {
+        try
+        {
+            _loading = true;
+            _error = null;
+
+            var result = await SystemService.GetAllSettingsAsync();
+
+            if (result.IsSuccess)
+            {
+                _settings = result.Value.ToList();
+            }
+            else
+            {
+                _error = result.Message ?? "Errore durante il caricamento delle impostazioni";
+                Snackbar.Add(_error, Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = $"Si è verificato un errore: {ex.Message}";
+            Snackbar.Add(_error, Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private List<string> GetCategories()
+    {
+        return _settings.Select(s => s.Category).Distinct().OrderBy(c => c).ToList();
+    }
+
+    private IEnumerable<SettingMetadata> GetSettingsByCategory(string category)
+    {
+        return _settings.Where(s => s.Category == category).OrderBy(s => s.Key);
+    }
+
+    private string GetCategoryIcon(string category)
+    {
+        return category switch
+        {
+            "Jwt" => Icons.Material.Filled.Security,
+            "Email" => Icons.Material.Filled.Email,
+            "General" => Icons.Material.Filled.Settings,
+            "Database" => Icons.Material.Filled.Storage,
+            _ => Icons.Material.Filled.Folder
+        };
+    }
+
+    private string GetDisplayValue(SettingMetadata setting)
+    {
+        if (setting.DataType == "Password" && !string.IsNullOrEmpty(setting.Value))
+        {
+            return "••••••••";
+        }
+        
+        if (setting.DataType == "Boolean")
+        {
+            return setting.Value?.ToLower() == "true" ? "Sì" : "No";
+        }
+
+        if (string.IsNullOrEmpty(setting.Value))
+        {
+            return "-";
+        }
+
+        if (setting.Value.Length > 50)
+        {
+            return setting.Value.Substring(0, 50) + "...";
+        }
+
+        return setting.Value;
+    }
+
+    private async Task OpenCreateDialog()
+    {
+        var categories = GetCategories();
+        var parameters = new DialogParameters
+        {
+            { nameof(CreateSettingDialog.ExistingCategories), categories }
+        };
+
+        var options = new DialogOptions 
+        { 
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true
+        };
+        
+        var dialog = await DialogService.ShowAsync<CreateSettingDialog>("Crea Nuova Impostazione", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data is CreateSettingRequest createRequest)
+        {
+            await CreateSetting(createRequest);
+        }
+    }
+
+    private async Task CreateSetting(CreateSettingRequest request)
+    {
+        try
+        {
+            var result = await SystemService.CreateSettingAsync(request);
+            
+            if (result.IsSuccess)
+            {
+                Snackbar.Add("Impostazione creata con successo!", Severity.Success);
+                await LoadSettings();
+            }
+            else
+            {
+                Snackbar.Add($"Errore: {result.Message}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Errore durante la creazione: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task OpenEditDialog(SettingMetadata setting)
+    {
+        var parameters = new DialogParameters
+        {
+            { nameof(EditSettingDialog.Setting), setting }
+        };
+
+        var options = new DialogOptions 
+        { 
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true
+        };
+        
+        var dialog = await DialogService.ShowAsync<EditSettingDialog>($"Modifica: {setting.Key}", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data is UpdateSettingRequest updateRequest)
+        {
+            await UpdateSetting(setting.Key, updateRequest);
+        }
+    }
+
+    private async Task UpdateSetting(string key, UpdateSettingRequest request)
+    {
+        try
+        {
+            var result = await SystemService.UpdateSettingAsync(key, request);
+            
+            if (result.IsSuccess)
+            {
+                Snackbar.Add("Impostazione aggiornata con successo!", Severity.Success);
+                await LoadSettings();
+            }
+            else
+            {
+                Snackbar.Add($"Errore: {result.Message}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Errore durante l'aggiornamento: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task OpenDeleteDialog(SettingMetadata setting)
+    {
+        var parameters = new DialogParameters
+        {
+            { nameof(DeleteSettingDialog.Setting), setting }
+        };
+
+        var options = new DialogOptions 
+        { 
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Small
+        };
+        
+        var dialog = await DialogService.ShowAsync<DeleteSettingDialog>("Conferma Eliminazione", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            await DeleteSetting(setting.Key);
+        }
+    }
+
+    private async Task DeleteSetting(string key)
+    {
+        try
+        {
+            var result = await SystemService.DeleteSettingAsync(key);
+            
+            if (result.IsSuccess)
+            {
+                Snackbar.Add("Impostazione eliminata con successo!", Severity.Success);
+                await LoadSettings();
+            }
+            else
+            {
+                Snackbar.Add($"Errore: {result.Message}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Errore durante l'eliminazione: {ex.Message}", Severity.Error);
+        }
+    }
+}

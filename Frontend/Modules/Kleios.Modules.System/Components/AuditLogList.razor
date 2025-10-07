@@ -1,0 +1,213 @@
+@page "/System/AuditLogs"
+@using Kleios.Shared.Authorization
+@using Kleios.Shared.Models
+@attribute [Authorize(Policy = AppPermissions.Logs.View)]
+@inject ISystemAdministrationService SystemService
+@inject ISnackbar Snackbar
+
+<PageTitle>Log di Audit</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="my-4">
+    <MudCard Elevation="3">
+        <MudCardHeader>
+            <CardHeaderContent>
+                <MudText Typo="Typo.h4">Log di Audit</MudText>
+            </CardHeaderContent>
+            <CardHeaderActions>
+                <MudIconButton Icon="@Icons.Material.Filled.Refresh" 
+                               Color="Color.Primary"
+                               OnClick="LoadAuditLogs"
+                               Title="Aggiorna" />
+            </CardHeaderActions>
+        </MudCardHeader>
+        <MudCardContent>
+            <!-- Filtri -->
+            <MudExpansionPanels>
+                <MudExpansionPanel Text="Filtri" IsInitiallyExpanded="false">
+                    <MudGrid>
+                        <MudItem xs="12" sm="4">
+                            <MudSelect T="string" @bind-Value="_filter.Action" Label="Azione" Clearable="true">
+                                <MudSelectItem T="string" Value="@("Create")">Creazione</MudSelectItem>
+                                <MudSelectItem T="string" Value="@("Update")">Modifica</MudSelectItem>
+                                <MudSelectItem T="string" Value="@("Delete")">Eliminazione</MudSelectItem>
+                                <MudSelectItem T="string" Value="@("View")">Visualizzazione</MudSelectItem>
+                                <MudSelectItem T="string" Value="@("Login")">Login</MudSelectItem>
+                                <MudSelectItem T="string" Value="@("Logout")">Logout</MudSelectItem>
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12" sm="4">
+                            <MudSelect T="string" @bind-Value="_filter.ResourceType" Label="Tipo Risorsa" Clearable="true">
+                                <MudSelectItem T="string" Value="@("User")">Utente</MudSelectItem>
+                                <MudSelectItem T="string" Value="@("Role")">Ruolo</MudSelectItem>
+                                <MudSelectItem T="string" Value="@("Setting")">Impostazione</MudSelectItem>
+                                <MudSelectItem T="string" Value="@("Permission")">Permesso</MudSelectItem>
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12" sm="4">
+                            <MudTextField @bind-Value="_filter.SearchTerm" Label="Cerca" Clearable="true" Immediate="true" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudDatePicker @bind-Date="_startDate" Label="Data Inizio" Clearable="true" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudDatePicker @bind-Date="_endDate" Label="Data Fine" Clearable="true" />
+                        </MudItem>
+                        <MudItem xs="12" Class="d-flex justify-end">
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="ApplyFilters">
+                                Applica Filtri
+                            </MudButton>
+                            <MudButton Variant="Variant.Text" OnClick="ClearFilters" Class="ml-2">
+                                Pulisci
+                            </MudButton>
+                        </MudItem>
+                    </MudGrid>
+                </MudExpansionPanel>
+            </MudExpansionPanels>
+
+            @if (_loading)
+            {
+                <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-4" />
+            }
+            else if (_error != null)
+            {
+                <MudAlert Severity="Severity.Error" Class="my-4">@_error</MudAlert>
+            }
+            else
+            {
+                <MudTable Items="@_auditLogs" 
+                          Hover="true" 
+                          Dense="true"
+                          Breakpoint="Breakpoint.Sm"
+                          Class="mt-4">
+                    <HeaderContent>
+                        <MudTh>Data/Ora</MudTh>
+                        <MudTh>Utente</MudTh>
+                        <MudTh>Azione</MudTh>
+                        <MudTh>Risorsa</MudTh>
+                        <MudTh>Descrizione</MudTh>
+                        <MudTh>IP</MudTh>
+                        <MudTh>Risultato</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Data/Ora">
+                            <MudText Typo="Typo.body2">@context.Timestamp.ToString("dd/MM/yyyy HH:mm:ss")</MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Utente">
+                            <MudText Typo="Typo.body2">@(context.Username ?? "Sistema")</MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Azione">
+                            <MudChip T="string" Size="Size.Small" Color="@GetActionColor(context.Action)">
+                                @context.Action
+                            </MudChip>
+                        </MudTd>
+                        <MudTd DataLabel="Risorsa">
+                            <MudText Typo="Typo.body2">
+                                @context.ResourceType
+                                @if (!string.IsNullOrEmpty(context.ResourceId))
+                                {
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                        (@context.ResourceId.Substring(0, Math.Min(8, context.ResourceId.Length))...)
+                                    </MudText>
+                                }
+                            </MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Descrizione">
+                            <MudText Typo="Typo.body2">@GetTruncatedDescription(context.Description)</MudText>
+                        </MudTd>
+                        <MudTd DataLabel="IP">
+                            <MudText Typo="Typo.caption">@context.IpAddress</MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Risultato">
+                            <MudChip T="string" 
+                                     Size="Size.Small" 
+                                     Color="@(context.Result == "Success" ? Color.Success : Color.Error)">
+                                @context.Result
+                            </MudChip>
+                        </MudTd>
+                    </RowTemplate>
+                    <PagerContent>
+                        <MudTablePager PageSizeOptions="new int[] { 25, 50, 100 }" />
+                    </PagerContent>
+                </MudTable>
+            }
+        </MudCardContent>
+    </MudCard>
+</MudContainer>
+
+@code {
+    private List<AuditLogDto> _auditLogs = new();
+    private bool _loading = true;
+    private string? _error;
+    private AuditLogFilterRequest _filter = new();
+    private DateTime? _startDate;
+    private DateTime? _endDate;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAuditLogs();
+    }
+
+    private async Task LoadAuditLogs()
+    {
+        try
+        {
+            _loading = true;
+            _error = null;
+
+            var result = await SystemService.GetAuditLogsAsync(_filter);
+
+            if (result.IsSuccess)
+            {
+                _auditLogs = result.Value.ToList();
+            }
+            else
+            {
+                _error = result.Message ?? "Errore durante il caricamento dei log";
+                Snackbar.Add(_error, Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = $"Si è verificato un errore: {ex.Message}";
+            Snackbar.Add(_error, Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task ApplyFilters()
+    {
+        _filter.StartDate = _startDate;
+        _filter.EndDate = _endDate;
+        await LoadAuditLogs();
+    }
+
+    private async Task ClearFilters()
+    {
+        _filter = new AuditLogFilterRequest();
+        _startDate = null;
+        _endDate = null;
+        await LoadAuditLogs();
+    }
+
+    private Color GetActionColor(string action)
+    {
+        return action switch
+        {
+            "Create" => Color.Success,
+            "Update" => Color.Info,
+            "Delete" => Color.Error,
+            "Login" => Color.Primary,
+            "Logout" => Color.Default,
+            _ => Color.Default
+        };
+    }
+
+    private string GetTruncatedDescription(string? description)
+    {
+        if (string.IsNullOrEmpty(description)) return "-";
+        return description.Length > 80 ? description.Substring(0, 80) + "..." : description;
+    }
+}

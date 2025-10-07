@@ -1,0 +1,60 @@
+@using Kleios.Shared.Models
+
+<MudDialog>
+    <DialogContent>
+        <MudAlert Severity="Severity.Warning" Class="mb-4">
+            <MudText Typo="Typo.body1">
+                Sei sicuro di voler eliminare l'utente <strong>@User.Username</strong>?
+            </MudText>
+        </MudAlert>
+        
+        <MudText Typo="Typo.body2" Class="mb-2">
+            <strong>Email:</strong> @User.Email
+        </MudText>
+        
+        @if (User.Roles.Any())
+        {
+            <MudText Typo="Typo.body2" Class="mb-2">
+                <strong>Ruoli:</strong> @string.Join(", ", User.Roles)
+            </MudText>
+        }
+        
+        <MudText Typo="Typo.body2" Color="Color.Error" Class="mt-4">
+            <strong>Attenzione:</strong> Questa operazione è irreversibile!
+        </MudText>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Annulla</MudButton>
+        <MudButton Color="Color.Error" 
+                   Variant="Variant.Filled" 
+                   OnClick="Confirm"
+                   Disabled="_deleting">
+            @if (_deleting)
+            {
+                <MudProgressCircular Class="mr-2" Size="Size.Small" Indeterminate="true" />
+            }
+            Elimina
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] 
+    IMudDialogInstance MudDialog { get; set; } = null!;
+    
+    [Parameter]
+    public UserDetailResponse User { get; set; } = null!;
+    
+    private bool _deleting;
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+
+    private void Confirm()
+    {
+        _deleting = true;
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+}

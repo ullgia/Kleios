@@ -1,28 +1,27 @@
-@page "/System/Users"
+@page "/System/Roles"
 @using Kleios.Shared.Authorization
 @using Kleios.Shared.Models
-@using Kleios.Modules.System.Components.Users
-@attribute [Authorize(Policy = AppPermissions.Users.View)]
+@using Kleios.Modules.System.Components.Roles
+@attribute [Authorize(Policy = AppPermissions.Roles.View)]
 @inject ISystemAdministrationService SystemService
-@inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 
-<PageTitle>Gestione Utenti</PageTitle>
+<PageTitle>Gestione Ruoli</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.Large" Class="my-4">
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="my-4">
     <MudCard Elevation="3">
         <MudCardHeader>
             <CardHeaderContent>
-                <MudText Typo="Typo.h4">Gestione Utenti</MudText>
+                <MudText Typo="Typo.h4">Gestione Ruoli</MudText>
             </CardHeaderContent>
             <CardHeaderActions>
-                <AuthorizeView Policy="@AppPermissions.Users.Manage">
+                <AuthorizeView Policy="@AppPermissions.Roles.Manage">
                     <MudButton Variant="Variant.Filled" 
                                Color="Color.Primary" 
                                StartIcon="@Icons.Material.Filled.Add"
                                OnClick="OpenCreateDialog">
-                        Nuovo Utente
+                        Nuovo Ruolo
                     </MudButton>
                 </AuthorizeView>
             </CardHeaderActions>
@@ -38,56 +37,58 @@
             }
             else
             {
-                <MudTable Items="@_users" 
+                <MudTable Items="@_roles" 
                           Hover="true" 
                           Breakpoint="Breakpoint.Sm" 
                           Loading="@_loading"
                           LoadingProgressColor="Color.Info"
                           Dense="true">
                     <HeaderContent>
-                        <MudTh>Username</MudTh>
-                        <MudTh>Email</MudTh>
-                        <MudTh>Nome Completo</MudTh>
-                        <MudTh>Ruoli</MudTh>
+                        <MudTh>Nome</MudTh>
+                        <MudTh>Descrizione</MudTh>
+                        <MudTh>Permessi</MudTh>
                         <MudTh>Data Creazione</MudTh>
-                        <MudTh>Stato</MudTh>
+                        <MudTh>Tipo</MudTh>
                         <MudTh Style="text-align: right">Azioni</MudTh>
                     </HeaderContent>
                     <RowTemplate>
-                        <MudTd DataLabel="Username">
+                        <MudTd DataLabel="Nome">
                             <MudText Typo="Typo.body2">
-                                <strong>@context.Username</strong>
-                                @if (context.IsMasterUser)
-                                {
-                                    <MudChip T="string" Size="Size.Small" Color="Color.Error" Class="ml-2">Master</MudChip>
-                                }
+                                <strong>@context.Name</strong>
                             </MudText>
                         </MudTd>
-                        <MudTd DataLabel="Email">@context.Email</MudTd>
-                        <MudTd DataLabel="Nome Completo">@GetFullName(context)</MudTd>
-                        <MudTd DataLabel="Ruoli">
-                            @foreach (var role in context.Roles)
+                        <MudTd DataLabel="Descrizione">
+                            <MudText Typo="Typo.body2">@context.Description</MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Permessi">
+                            <MudChip T="string" Size="Size.Small" Color="Color.Info">
+                                @context.Permissions.Count permessi
+                            </MudChip>
+                            @if (context.Permissions.Any())
                             {
-                                <MudChip T="string" Color="GetRoleColor(role)" Size="Size.Small" Class="mr-1">@role</MudChip>
+                                <MudIconButton Icon="@Icons.Material.Filled.Visibility" 
+                                               Size="Size.Small"
+                                               OnClick="@(() => ShowPermissions(context))"
+                                               Title="Visualizza permessi" />
                             }
                         </MudTd>
                         <MudTd DataLabel="Data Creazione">@context.CreatedAt.ToString("dd/MM/yyyy HH:mm")</MudTd>
-                        <MudTd DataLabel="Stato">
+                        <MudTd DataLabel="Tipo">
                             <MudChip T="string" 
-                                     Color="@(context.EmailConfirmed ? Color.Success : Color.Warning)" 
+                                     Color="@(context.IsSystemRole ? Color.Warning : Color.Default)" 
                                      Size="Size.Small">
-                                @(context.EmailConfirmed ? "Confermato" : "In attesa")
+                                @(context.IsSystemRole ? "Sistema" : "Personalizzato")
                             </MudChip>
                         </MudTd>
                         <MudTd DataLabel="Azioni" Style="text-align: right">
-                            <AuthorizeView Policy="@AppPermissions.Users.Manage" Context="auth">
+                            <AuthorizeView Policy="@AppPermissions.Roles.Manage" Context="auth">
                                 <MudButtonGroup Size="Size.Small" Variant="Variant.Outlined">
                                     <MudIconButton Icon="@Icons.Material.Filled.Edit" 
                                                    Color="Color.Primary"
                                                    Size="Size.Small"
                                                    OnClick="@(() => OpenEditDialog(context))"
                                                    Title="Modifica" />
-                                    @if (!context.IsMasterUser)
+                                    @if (!context.IsSystemRole)
                                     {
                                         <MudIconButton Icon="@Icons.Material.Filled.Delete" 
                                                        Color="Color.Error"
@@ -109,67 +110,49 @@
 </MudContainer>
 
 @code {
-    private List<UserDetailResponse> _users = new();
-    private List<string> _availableRoles = new();
+    private List<RoleDto> _roles = new();
+    private List<PermissionDto> _allPermissions = new();
     private bool _loading = true;
     private string? _error;
 
     protected override async Task OnInitializedAsync()
     {
+        await LoadPermissions();
         await LoadRoles();
-        await LoadUsers();
+    }
+
+    private async Task LoadPermissions()
+    {
+        try
+        {
+            var result = await SystemService.GetPermissionsAsync();
+            if (result.IsSuccess)
+            {
+                _allPermissions = result.Value.ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Errore caricamento permessi: {ex.Message}", Severity.Warning);
+        }
     }
 
     private async Task LoadRoles()
     {
         try
         {
-            var result = await SystemService.GetRolesAsync();
-            if (result.IsSuccess)
-            {
-                _availableRoles = result.Value.Select(r => r.Name).ToList();
-            }
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Errore caricamento ruoli: {ex.Message}", Severity.Warning);
-        }
-    }
-
-    private async Task LoadUsers()
-    {
-        try
-        {
             _loading = true;
             _error = null;
 
-            var filter = new UserFilter
-            {
-                Page = 1,
-                PageSize = 100
-            };
-            
-            var result = await SystemService.GetUsersAsync(filter);
+            var result = await SystemService.GetRolesAsync();
 
             if (result.IsSuccess)
             {
-                _users = result.Value.Select(u => new UserDetailResponse
-                {
-                    Id = u.Id,
-                    Username = u.Username,
-                    Email = u.Email,
-                    FirstName = u.FirstName,
-                    LastName = u.LastName,
-                    Roles = u.Roles,
-                    CreatedAt = u.CreatedAt,
-                    UpdatedAt = u.UpdatedAt,
-                    EmailConfirmed = u.UpdatedAt != null,
-                    IsMasterUser = u.Username == "master"
-                }).ToList();
+                _roles = result.Value.ToList();
             }
             else
             {
-                _error = result.Message ?? "Errore durante il caricamento degli utenti";
+                _error = result.Message ?? "Errore durante il caricamento dei ruoli";
                 Snackbar.Add(_error, Severity.Error);
             }
         }
@@ -188,35 +171,35 @@
     {
         var parameters = new DialogParameters
         {
-            { nameof(CreateUserDialog.AvailableRoles), _availableRoles }
+            { nameof(CreateRoleDialog.AllPermissions), _allPermissions }
         };
 
         var options = new DialogOptions 
         { 
             CloseOnEscapeKey = true,
-            MaxWidth = MaxWidth.Small,
+            MaxWidth = MaxWidth.Medium,
             FullWidth = true
         };
         
-        var dialog = await DialogService.ShowAsync<CreateUserDialog>("Crea Nuovo Utente", parameters, options);
+        var dialog = await DialogService.ShowAsync<CreateRoleDialog>("Crea Nuovo Ruolo", parameters, options);
         var result = await dialog.Result;
 
-        if (!result.Canceled && result.Data is CreateUserRequest createRequest)
+        if (!result.Canceled && result.Data is CreateRoleRequest createRequest)
         {
-            await CreateUser(createRequest);
+            await CreateRole(createRequest);
         }
     }
 
-    private async Task CreateUser(CreateUserRequest request)
+    private async Task CreateRole(CreateRoleRequest request)
     {
         try
         {
-            var result = await SystemService.CreateUserAsync(request);
+            var result = await SystemService.CreateRoleAsync(request);
             
             if (result.IsSuccess)
             {
-                Snackbar.Add("Utente creato con successo!", Severity.Success);
-                await LoadUsers();
+                Snackbar.Add("Ruolo creato con successo!", Severity.Success);
+                await LoadRoles();
             }
             else
             {
@@ -229,40 +212,40 @@
         }
     }
 
-    private async Task OpenEditDialog(UserDetailResponse user)
+    private async Task OpenEditDialog(RoleDto role)
     {
         var parameters = new DialogParameters
         {
-            { nameof(EditUserDialog.User), user },
-            { nameof(EditUserDialog.AvailableRoles), _availableRoles }
+            { nameof(EditRoleDialog.Role), role },
+            { nameof(EditRoleDialog.AllPermissions), _allPermissions }
         };
 
         var options = new DialogOptions 
         { 
             CloseOnEscapeKey = true,
-            MaxWidth = MaxWidth.Small,
+            MaxWidth = MaxWidth.Medium,
             FullWidth = true
         };
         
-        var dialog = await DialogService.ShowAsync<EditUserDialog>($"Modifica Utente: {user.Username}", parameters, options);
+        var dialog = await DialogService.ShowAsync<EditRoleDialog>($"Modifica Ruolo: {role.Name}", parameters, options);
         var result = await dialog.Result;
 
-        if (!result.Canceled && result.Data is UpdateUserRequest updateRequest)
+        if (!result.Canceled && result.Data is UpdateRoleRequest updateRequest)
         {
-            await UpdateUser(user.Id, updateRequest);
+            await UpdateRole(role.Id, updateRequest);
         }
     }
 
-    private async Task UpdateUser(Guid userId, UpdateUserRequest request)
+    private async Task UpdateRole(Guid roleId, UpdateRoleRequest request)
     {
         try
         {
-            var result = await SystemService.UpdateUserAsync(userId, request);
+            var result = await SystemService.UpdateRoleAsync(roleId, request);
             
             if (result.IsSuccess)
             {
-                Snackbar.Add("Utente aggiornato con successo!", Severity.Success);
-                await LoadUsers();
+                Snackbar.Add("Ruolo aggiornato con successo!", Severity.Success);
+                await LoadRoles();
             }
             else
             {
@@ -275,11 +258,11 @@
         }
     }
 
-    private async Task OpenDeleteDialog(UserDetailResponse user)
+    private async Task OpenDeleteDialog(RoleDto role)
     {
         var parameters = new DialogParameters
         {
-            { nameof(DeleteUserDialog.User), user }
+            { nameof(DeleteRoleDialog.Role), role }
         };
 
         var options = new DialogOptions 
@@ -288,25 +271,25 @@
             MaxWidth = MaxWidth.Small
         };
         
-        var dialog = await DialogService.ShowAsync<DeleteUserDialog>("Conferma Eliminazione", parameters, options);
+        var dialog = await DialogService.ShowAsync<DeleteRoleDialog>("Conferma Eliminazione", parameters, options);
         var result = await dialog.Result;
 
         if (!result.Canceled)
         {
-            await DeleteUser(user.Id);
+            await DeleteRole(role.Id);
         }
     }
 
-    private async Task DeleteUser(Guid userId)
+    private async Task DeleteRole(Guid roleId)
     {
         try
         {
-            var result = await SystemService.DeleteUserAsync(userId);
+            var result = await SystemService.DeleteRoleAsync(roleId);
             
             if (result.IsSuccess)
             {
-                Snackbar.Add("Utente eliminato con successo!", Severity.Success);
-                await LoadUsers();
+                Snackbar.Add("Ruolo eliminato con successo!", Severity.Success);
+                await LoadRoles();
             }
             else
             {
@@ -319,41 +302,19 @@
         }
     }
 
-    private string GetFullName(UserDetailResponse user)
+    private void ShowPermissions(RoleDto role)
     {
-        if (!string.IsNullOrEmpty(user.FirstName) || !string.IsNullOrEmpty(user.LastName))
+        var parameters = new DialogParameters
         {
-            return $"{user.FirstName} {user.LastName}".Trim();
-        }
-        return "-";
-    }
-
-    private Color GetRoleColor(string role)
-    {
-        return role switch
-        {
-            "Admin" => Color.Error,
-            "Manager" => Color.Warning,
-            "User" => Color.Info,
-            _ => Color.Default
+            { nameof(ViewPermissionsDialog.Role), role }
         };
-    }
-}
-        }
-        finally
-        {
-            _loading = false;
-        }
-    }
 
-    private Color GetRoleColor(string role)
-    {
-        return role switch
-        {
-            "Admin" => Color.Error,
-            "Manager" => Color.Warning,
-            "Utente" => Color.Info,
-            _ => Color.Default
+        var options = new DialogOptions 
+        { 
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Medium
         };
+        
+        DialogService.ShowAsync<ViewPermissionsDialog>($"Permessi del Ruolo: {role.Name}", parameters, options);
     }
 }

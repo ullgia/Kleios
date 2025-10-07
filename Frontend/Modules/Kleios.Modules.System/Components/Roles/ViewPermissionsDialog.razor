@@ -1,0 +1,92 @@
+@using Kleios.Shared.Models
+
+<MudDialog>
+    <DialogContent>
+        <MudText Typo="Typo.h6" Class="mb-3">
+            Permessi del Ruolo: <strong>@Role.Name</strong>
+        </MudText>
+        
+        @if (!string.IsNullOrEmpty(Role.Description))
+        {
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+                @Role.Description
+            </MudText>
+        }
+        
+        @if (Role.Permissions.Any())
+        {
+            <MudPaper Outlined="true" Class="pa-3" Style="max-height: 500px; overflow-y: auto;">
+                @foreach (var group in GetPermissionGroups())
+                {
+                    <MudText Typo="Typo.subtitle1" Class="mt-3 mb-2">
+                        <MudIcon Icon="@Icons.Material.Filled.FolderOpen" Size="Size.Small" Class="mr-1" />
+                        @group.Key
+                    </MudText>
+                    <MudDivider Class="mb-2" />
+                    
+                    <MudList T="string" Dense="true">
+                        @foreach (var permission in group.Value)
+                        {
+                            <MudListItem T="string">
+                                <MudText Typo="Typo.body2">
+                                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" 
+                                             Color="Color.Success" 
+                                             Size="Size.Small" 
+                                             Class="mr-2" />
+                                    @permission.Name
+                                </MudText>
+                                @if (!string.IsNullOrEmpty(permission.Description))
+                                {
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="ml-7">
+                                        @permission.Description
+                                    </MudText>
+                                }
+                            </MudListItem>
+                        }
+                    </MudList>
+                }
+            </MudPaper>
+            
+            <MudText Typo="Typo.caption" Class="mt-3">
+                Totale: @Role.Permissions.Count permessi
+            </MudText>
+        }
+        else
+        {
+            <MudAlert Severity="Severity.Info">
+                Questo ruolo non ha permessi assegnati.
+            </MudAlert>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Close">
+            Chiudi
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] 
+    IMudDialogInstance MudDialog { get; set; } = null!;
+    
+    [Parameter]
+    public RoleDto Role { get; set; } = null!;
+
+    private Dictionary<string, List<PermissionDto>> GetPermissionGroups()
+    {
+        return Role.Permissions
+            .GroupBy(p => GetPermissionCategory(p.SystemName))
+            .ToDictionary(g => g.Key, g => g.ToList());
+    }
+
+    private string GetPermissionCategory(string systemName)
+    {
+        var parts = systemName.Split('.');
+        return parts.Length > 0 ? parts[0] : "Altri";
+    }
+
+    private void Close()
+    {
+        MudDialog.Close();
+    }
+}

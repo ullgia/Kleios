@@ -1,0 +1,60 @@
+@using Kleios.Shared.Models
+
+<MudDialog>
+    <DialogContent>
+        <MudAlert Severity="Severity.Warning" Class="mb-4">
+            <MudText Typo="Typo.body1">
+                Sei sicuro di voler eliminare il ruolo <strong>@Role.Name</strong>?
+            </MudText>
+        </MudAlert>
+        
+        <MudText Typo="Typo.body2" Class="mb-2">
+            <strong>Descrizione:</strong> @Role.Description
+        </MudText>
+        
+        @if (Role.Permissions.Any())
+        {
+            <MudText Typo="Typo.body2" Class="mb-2">
+                <strong>Permessi assegnati:</strong> @Role.Permissions.Count
+            </MudText>
+        }
+        
+        <MudText Typo="Typo.body2" Color="Color.Error" Class="mt-4">
+            <strong>Attenzione:</strong> Tutti gli utenti con questo ruolo perderanno i permessi associati!
+        </MudText>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Annulla</MudButton>
+        <MudButton Color="Color.Error" 
+                   Variant="Variant.Filled" 
+                   OnClick="Confirm"
+                   Disabled="_deleting">
+            @if (_deleting)
+            {
+                <MudProgressCircular Class="mr-2" Size="Size.Small" Indeterminate="true" />
+            }
+            Elimina
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] 
+    IMudDialogInstance MudDialog { get; set; } = null!;
+    
+    [Parameter]
+    public RoleDto Role { get; set; } = null!;
+    
+    private bool _deleting;
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+
+    private void Confirm()
+    {
+        _deleting = true;
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+}

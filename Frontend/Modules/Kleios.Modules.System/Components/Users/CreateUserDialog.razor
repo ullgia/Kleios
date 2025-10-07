@@ -1,0 +1,132 @@
+@using Kleios.Shared.Models
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudForm @ref="_form" @bind-IsValid="@_isValid">
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_model.Username" 
+                                  Label="Username" 
+                                  Required="true"
+                                  RequiredError="Username obbligatorio"
+                                  Variant="Variant.Outlined" />
+                </MudItem>
+                
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_model.Email" 
+                                  Label="Email" 
+                                  Required="true"
+                                  RequiredError="Email obbligatoria"
+                                  Validation="@(new EmailAddressAttribute())"
+                                  Variant="Variant.Outlined" />
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_model.FirstName" 
+                                  Label="Nome" 
+                                  Variant="Variant.Outlined" />
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_model.LastName" 
+                                  Label="Cognome" 
+                                  Variant="Variant.Outlined" />
+                </MudItem>
+                
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_model.Password" 
+                                  Label="Password" 
+                                  InputType="InputType.Password"
+                                  Required="true"
+                                  RequiredError="Password obbligatoria"
+                                  Variant="Variant.Outlined"
+                                  HelperText="Minimo 8 caratteri, una maiuscola, una minuscola, un numero" />
+                </MudItem>
+                
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_confirmPassword" 
+                                  Label="Conferma Password" 
+                                  InputType="InputType.Password"
+                                  Required="true"
+                                  Variant="Variant.Outlined"
+                                  Validation="@(() => _confirmPassword == _model.Password ? null : "Le password non corrispondono")" />
+                </MudItem>
+                
+                <MudItem xs="12">
+                    <MudSelect T="string" 
+                               SelectedValues="_model.Roles" 
+                               SelectedValuesChanged="@((IEnumerable<string> values) => _model.Roles = values.ToList())"
+                               Label="Ruoli" 
+                               MultiSelection="true"
+                               Variant="Variant.Outlined"
+                               AnchorOrigin="Origin.BottomCenter">
+                        @foreach (var role in AvailableRoles)
+                        {
+                            <MudSelectItem T="string" Value="@role">@role</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+            </MudGrid>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Annulla</MudButton>
+        <MudButton Color="Color.Primary" 
+                   Variant="Variant.Filled" 
+                   OnClick="Submit"
+                   Disabled="@(!_isValid || _saving)">
+            @if (_saving)
+            {
+                <MudProgressCircular Class="mr-2" Size="Size.Small" Indeterminate="true" />
+            }
+            Crea Utente
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] 
+    IMudDialogInstance MudDialog { get; set; } = null!;
+    
+    [Parameter]
+    public List<string> AvailableRoles { get; set; } = new();
+    
+    private MudForm _form = null!;
+    private bool _isValid;
+    private bool _saving;
+    private CreateUserRequest _model = new() 
+    { 
+        Username = "", 
+        Email = "", 
+        Password = "", 
+        FirstName = "", 
+        LastName = "" 
+    };
+    private string _confirmPassword = string.Empty;
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+
+    private async Task Submit()
+    {
+        await _form.Validate();
+        
+        if (!_isValid)
+        {
+            Snackbar.Add("Correggi gli errori nel form", Severity.Warning);
+            return;
+        }
+
+        if (_model.Password != _confirmPassword)
+        {
+            Snackbar.Add("Le password non corrispondono", Severity.Error);
+            return;
+        }
+
+        _saving = true;
+        MudDialog.Close(DialogResult.Ok(_model));
+    }
+}
