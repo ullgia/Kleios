@@ -14,7 +14,7 @@
   <ItemGroup>
     <PackageReference Include="Aspire.Hosting.AppHost" Version="9.2.1" />
     <ProjectReference Include="..\..\Backend\Kleios.Backend.Authentication\Kleios.Backend.Authentication.csproj" />
-    <ProjectReference Include="..\..\Backend\Kleios.Backend.System\Kleios.Backend.SystemAdmin.csproj" />
+    <ProjectReference Include="..\..\Backend\Kleios.Backend.SystemAdmin\Kleios.Backend.SystemAdmin.csproj" />
     <ProjectReference Include="..\..\Frontend\Host\Kleios.Host.csproj" />
     <ProjectReference Include="..\Kleios.ServiceDefaults\Kleios.ServiceDefaults.csproj" IsAspireProjectResource="false" />
   </ItemGroup>
