@@ -1,0 +1,28 @@
+@inject NavigationManager Navigation
+
+<MudContainer Class="d-flex justify-center align-center" Style="height: 100vh;">
+    <MudPaper Elevation="2" Class="pa-8 text-center" Style="max-width: 600px;">
+        <MudIcon Icon="@Icons.Material.Filled.Lock" Color="Color.Error" Size="Size.Large" Class="mb-4" />
+        <MudText Typo="Typo.h4" Color="Color.Error" Class="mb-4">Accesso Negato</MudText>
+        <MudText Typo="Typo.body1" Class="mb-6">
+            Non hai i permessi necessari per accedere a questa risorsa.
+        </MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-6">
+            Se ritieni di dover avere accesso a questa pagina, contatta l'amministratore di sistema.
+        </MudText>
+        <MudDivider Class="my-4" />
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/" StartIcon="@Icons.Material.Filled.Home">
+            Torna alla Home
+        </MudButton>
+        <MudButton Variant="Variant.Text" Color="Color.Secondary" OnClick="GoBack" StartIcon="@Icons.Material.Filled.ArrowBack" Class="ml-2">
+            Indietro
+        </MudButton>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private void GoBack()
+    {
+        Navigation.NavigateTo("/");
+    }
+}

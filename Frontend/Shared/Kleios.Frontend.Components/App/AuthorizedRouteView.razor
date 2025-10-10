@@ -1,0 +1,56 @@
+@* 
+    Componente wrapper per gestire l'autorizzazione delle route.
+    Fornisce stati personalizzati per Authorizing, NotAuthorized e Authorized.
+*@
+
+<CascadingAuthenticationState>
+    <Router AppAssembly="@AppAssembly">
+        <Found Context="routeData">
+            <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@DefaultLayout">
+                <Authorizing>
+                    <MudContainer Class="d-flex justify-center align-center" Style="height: 100vh;">
+                        <MudPaper Elevation="0" Class="pa-8 text-center">
+                            <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+                            <MudText Typo="Typo.h6" Class="mt-4">Verifica autenticazione...</MudText>
+                        </MudPaper>
+                    </MudContainer>
+                </Authorizing>
+                <NotAuthorized>
+                    @if (context.User?.Identity?.IsAuthenticated == true)
+                    {
+                        <RedirectToAccessDenied />
+                    }
+                    else
+                    {
+                        <RedirectToLogin />
+                    }
+                </NotAuthorized>
+            </AuthorizeRouteView>
+        </Found>
+        <NotFound>
+            <PageTitle>Pagina non trovata</PageTitle>
+            <LayoutView Layout="@DefaultLayout">
+                <MudContainer Class="d-flex justify-center align-center" Style="height: 100vh;">
+                    <MudPaper Elevation="2" Class="pa-8 text-center" Style="max-width: 600px;">
+                        <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" Color="Color.Warning" Size="Size.Large" Class="mb-4" />
+                        <MudText Typo="Typo.h4" Class="mb-4">404 - Pagina non trovata</MudText>
+                        <MudText Typo="Typo.body1" Class="mb-6">
+                            La pagina richiesta non esiste.
+                        </MudText>
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/" StartIcon="@Icons.Material.Filled.Home">
+                            Torna alla Home
+                        </MudButton>
+                    </MudPaper>
+                </MudContainer>
+            </LayoutView>
+        </NotFound>
+    </Router>
+</CascadingAuthenticationState>
+
+@code {
+    [Parameter]
+    public Type? DefaultLayout { get; set; }
+
+    [Parameter]
+    public System.Reflection.Assembly? AppAssembly { get; set; }
+}

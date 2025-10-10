@@ -1,0 +1,82 @@
+@inject HttpClient Http
+@inject ILogger<NavMenu> Logger
+
+<MudNavMenu>
+    @if (_isLoading)
+    {
+        <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Small" Class="ma-4" />
+    }
+    else if (_routes != null && _routes.Any())
+    {
+        @foreach (var route in _routes.OrderBy(r => r.RoutePrefix))
+        {
+            <MudNavLink Href="@route.RoutePrefix" Icon="@Icons.Material.Filled.Apps">
+                @GetModuleName(route.ServiceName)
+            </MudNavLink>
+        }
+    }
+    else
+    {
+        <MudText Typo="Typo.body2" Class="pa-4">Nessuna route disponibile</MudText>
+    }
+</MudNavMenu>
+
+@code {
+    private List<ServiceRegistration>? _routes;
+    private bool _isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // TODO: Quando il Gateway sarà implementato, decommentare questa chiamata
+            // _routes = await Http.GetFromJsonAsync<List<ServiceRegistration>>($"{GatewayUrl}/api/_gateway/routes");
+            
+            // Per ora, usiamo dati mock per permettere il build
+            _routes = new List<ServiceRegistration>
+            {
+                new ServiceRegistration
+                {
+                    ServiceName = "home-module",
+                    RoutePrefix = "/",
+                    BaseUrl = "http://localhost:5001",
+                    HealthCheckEndpoint = "/_health"
+                },
+                new ServiceRegistration
+                {
+                    ServiceName = "auth-module",
+                    RoutePrefix = "/auth",
+                    BaseUrl = "http://localhost:5002",
+                    HealthCheckEndpoint = "/_health"
+                },
+                new ServiceRegistration
+                {
+                    ServiceName = "system-module",
+                    RoutePrefix = "/system",
+                    BaseUrl = "http://localhost:5003",
+                    HealthCheckEndpoint = "/_health"
+                }
+            };
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Errore nel caricamento delle routes dal Gateway");
+            _routes = new List<ServiceRegistration>();
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private string GetModuleName(string serviceName)
+    {
+        return serviceName switch
+        {
+            "home-module" => "Home",
+            "auth-module" => "Autenticazione",
+            "system-module" => "Sistema",
+            _ => serviceName.Replace("-module", "").Replace("-", " ")
+        };
+    }
+}

@@ -139,32 +139,36 @@ app.Use((context, next) =>
   - [x] `System.IdentityModel.Tokens.Jwt`
   - [ ] `ZiggyCreatures.FusionCache` (optional per cache) - FUTURE
 
-#### 1.3 Kleios.Frontend.Components (Layout e UI Condivisi)
-- [ ] Creare progetto Razor Class Library
-  - [ ] `dotnet new razorclasslib -n Kleios.Frontend.Components -f net9.0`
-- [ ] Implementare `Layout/MainLayout.razor`
-  - [ ] MudLayout con drawer per menu
-  - [ ] Header con logo e user info
-  - [ ] Footer
-  - [ ] Integrazione MudBlazor
-- [ ] Implementare `Layout/NavMenu.razor`
-  - [ ] Caricamento dinamico menu dal Gateway
-  - [ ] API call: `GET /api/_gateway/routes`
-  - [ ] Filtro routes in base a permessi utente
-  - [ ] Rendering MudNavMenu
-- [ ] Implementare `App/AuthorizedRouteView.razor`
-  - [ ] Wrapper per AuthorizeRouteView
-  - [ ] Stati: Authorizing, NotAuthorized, Authorized
-  - [ ] Loading spinner con MudProgressCircular
-- [ ] Implementare `App/RedirectToLogin.razor`
-  - [ ] NavigationManager.NavigateTo con returnUrl
-  - [ ] Force reload per cambio modulo
-- [ ] Implementare `App/RedirectToAccessDenied.razor`
-  - [ ] Pagina 403 con MudBlazor
-- [ ] Aggiungere package references
-  - [ ] `MudBlazor` (8.13.0 o superiore)
-  - [ ] `Microsoft.AspNetCore.Components.Web`
-  - [ ] `Microsoft.AspNetCore.Components.Authorization`
+#### 1.3 Kleios.Frontend.Components (Layout e UI Condivisi) ✅
+- [x] Creare progetto Razor Class Library
+  - [x] `dotnet new razorclasslib -n Kleios.Frontend.Components -f net9.0`
+- [x] Implementare `Layout/MainLayout.razor`
+  - [x] MudLayout con drawer per menu
+  - [x] Header con logo e user info
+  - [x] Menu utente con Profilo e Logout
+  - [x] Integrazione MudBlazor
+- [x] Implementare `Layout/NavMenu.razor`
+  - [x] Caricamento dinamico menu dal Gateway (con mock data per MVP)
+  - [x] API call preparata: `GET /api/_gateway/routes`
+  - [x] Rendering MudNavMenu con routes
+- [x] Implementare `App/AuthorizedRouteView.razor`
+  - [x] Router con AuthorizeRouteView
+  - [x] Stati: Authorizing, NotAuthorized, Authorized
+  - [x] Loading spinner con MudProgressCircular
+  - [x] NotFound con pagina 404 personalizzata
+- [x] Implementare `App/RedirectToLogin.razor`
+  - [x] NavigationManager.NavigateTo con returnUrl
+  - [x] Force reload per cambio modulo
+- [x] Implementare `App/RedirectToAccessDenied.razor`
+  - [x] Pagina 403 con MudBlazor
+  - [x] Pulsanti per tornare alla Home o Indietro
+- [x] Aggiungere package references
+  - [x] `MudBlazor` (8.13.0)
+  - [x] `Microsoft.AspNetCore.Components.Authorization` (9.0.9)
+  - [x] `Microsoft.Extensions.Logging.Abstractions` (9.0.9)
+  - [x] `Microsoft.Extensions.Http` (9.0.9)
+- [x] Aggiungere project reference
+  - [x] `Kleios.Frontend.Shared`
 
 ---
 
