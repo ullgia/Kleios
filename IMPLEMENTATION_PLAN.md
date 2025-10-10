@@ -400,10 +400,21 @@ app.UsePrefixRouting();           // ← Routing custom ULTIMO
 #### 3.7 Middleware ✅
 - [x] Implementare `Middleware/PathRewriteMiddleware.cs`
   - [x] Rimuove prefisso /auth dai path in ingresso
+  - [x] **Imposta PathBase** - Necessario per Blazor routing corretto
+  - [x] Imposta Path al remainder dopo il prefix
   - [x] Gateway inoltra con prefisso, middleware lo rimuove per gestione locale
   - [x] Extension method UsePathRewrite(string prefix)
+  - [x] Logging debug per troubleshooting
 - [x] Configurare in Program.cs
   - [x] `app.UsePathRewrite("/auth")` PRIMA di UseAuthentication
+
+**⚠️ CRITICO - PathBase vs Path:**
+```csharp
+// Request: /auth/account/login
+context.Request.PathBase = "/auth";      // ← Base per l'app
+context.Request.Path = "/account/login"; // ← Path relativo per Blazor
+```
+**MOTIVO**: Blazor Router richiede PathBase per costruire correttamente gli URL relativi. Senza PathBase, i link interni non funzionano.
 
 #### 3.8 Build e Test ✅
 - [x] Compilazione riuscita senza errori
