@@ -12,15 +12,20 @@ public class AuthModuleRegistration : BackgroundService
     private readonly IConfiguration _configuration;
     private readonly GatewayConnectionClient _gatewayClient;
     private readonly string _gatewayUrl;
+    private readonly IHostEnvironment _environment;
 
     public AuthModuleRegistration(
         ILogger<AuthModuleRegistration> logger,
         IConfiguration configuration,
         IHttpClientFactory httpClientFactory,
-        ILogger<GatewayConnectionClient> gatewayLogger)
+        ILogger<GatewayConnectionClient> gatewayLogger,
+        IHostEnvironment environment)
     {
         _logger = logger;
         _configuration = configuration;
+        _environment = environment;
+        
+        // GatewayUrl: in development usa Aspire, in production usa appsettings
         _gatewayUrl = _configuration["GatewayUrl"] ?? "https://localhost:5000";
         
         var httpClient = httpClientFactory.CreateClient();
@@ -35,7 +40,12 @@ public class AuthModuleRegistration : BackgroundService
 
         _logger.LogInformation("Starting Auth Module registration with Gateway");
 
-        var moduleUrl = _configuration["ModuleUrl"] ?? "https://localhost:5001";
+        // ModuleUrl: ottieni l'URL assegnato da Aspire/Kestrel alla startup
+        // In development Aspire assegna automaticamente la porta
+        // In production sarà configurato tramite variabile d'ambiente o appsettings
+        var moduleUrl = _configuration["urls"]?.Split(';').FirstOrDefault(u => u.StartsWith("https")) 
+                        ?? _configuration["ModuleUrl"] 
+                        ?? "https://localhost:5001";
         var registration = new ServiceRegistration
         {
             ServiceName = "auth-module",

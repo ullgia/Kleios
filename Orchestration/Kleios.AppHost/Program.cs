@@ -15,21 +15,14 @@ var systemBackend = builder.AddProject<Kleios_Backend_SystemAdmin>("system-backe
     .WithHttpsEndpoint(name: "system-backend-https");
 
 // ========================================
-// FRONTEND MODULES (SSR Blazor Web Apps)
+// FRONTEND MODULES
 // ========================================
+// Note: I moduli frontend comunicano con i backend via service discovery
+// Aspire inietta automaticamente la configurazione tramite .WithReference()
 
-var shell = builder.AddProject<Kleios_Frontend_Shell>("shell")
-    .WithHttpsEndpoint(name: "shell-https")
-    .WithReference(authBackend)
-    .WithReference(systemBackend);
-
-var authModule = builder.AddProject<Kleios_Modules_Auth>("auth-module")
+var authModule = builder.AddProject<Kleios_Module_Auth>("auth-module")
     .WithHttpsEndpoint(name: "auth-module-https")
-    .WithReference(authBackend);
-
-var systemModule = builder.AddProject<Kleios_Modules_System>("system-module")
-    .WithHttpsEndpoint(name: "system-module-https")
-    .WithReference(systemBackend);
+    .WithReference(authBackend); // Service discovery: "https+http://auth-backend"
 
 // ========================================
 // GATEWAY (YARP Reverse Proxy)
@@ -41,8 +34,6 @@ var gateway = builder.AddProject<Kleios_Gateway>("gateway")
     .WithHttpsEndpoint(port: 5000, name: "gateway-https")
     .WithReference(authBackend)
     .WithReference(systemBackend)
-    .WithReference(shell)
-    .WithReference(authModule)
-    .WithReference(systemModule);
+    .WithReference(authModule);
 
 builder.Build().Run();

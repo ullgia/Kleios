@@ -8,19 +8,36 @@ using Microsoft.AspNetCore.Components.Authorization;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Add service discovery (Aspire integration)
+builder.Services.AddServiceDiscovery();
+
+// Configure HttpClient for backend with service discovery
+builder.Services.ConfigureHttpClientDefaults(http =>
+{
+    // Turn on resilience by default
+    http.AddStandardResilienceHandler();
+    
+    // Turn on service discovery by default
+    http.AddServiceDiscovery();
+});
+
 // Add services to the container.
 builder.Services.AddRazorComponents();
 
 // Add MudBlazor services
 builder.Services.AddMudServices();
 
-// Add authentication services
+// Add authentication & authorization services
 var isDevelopment = builder.Environment.IsDevelopment();
 builder.Services.AddKleiosCookieAuthentication(isDevelopment, null);
 builder.Services.AddCascadingAuthenticationState();
+builder.Services.AddAuthorization();
 
 // Add infrastructure services (IAuthenticationService, etc.)
-var backendUrl = builder.Configuration["BackendUrl"] ?? "https://localhost:7000";
+// Backend URL viene da Aspire Service Discovery tramite .WithReference() nell'AppHost
+// In development: "https+http://auth-backend" (risolto automaticamente)
+// In production: configurato in appsettings.json
+var backendUrl = builder.Configuration["BackendUrl"] ?? "https+http://auth-backend";
 builder.Services.AddKleiosInfrastructure(backendUrl);
 
 // Add Gateway registration as hosted service
