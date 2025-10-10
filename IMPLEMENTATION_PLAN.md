@@ -172,110 +172,112 @@ app.Use((context, next) =>
 
 ---
 
-### FASE 2: Gateway (Core dell'Architettura)
+### FASE 2: Gateway (Core dell'Architettura) ✅
 
-#### 2.1 Kleios.Gateway - Progetto Base
-- [ ] Creare progetto ASP.NET Core Empty
-  - [ ] `dotnet new web -n Kleios.Gateway -f net9.0`
-- [ ] Aggiungere package references
-  - [ ] `Yarp.ReverseProxy` (2.x)
-  - [ ] `Microsoft.AspNetCore.SignalR` (per WebSocket)
-  - [ ] `MudBlazor` (per servire static assets)
+#### 2.1 Kleios.Gateway - Progetto Base ✅
+- [x] Creare progetto ASP.NET Core Empty
+  - [x] `dotnet new web -n Kleios.Gateway -f net9.0`
+- [x] Aggiungere package references
+  - [x] `Yarp.ReverseProxy` (2.3.0)
+  - [x] `MudBlazor` (8.13.0 - per servire static assets)
+- [x] Aggiungere project reference
+  - [x] `Kleios.Frontend.Shared`
 
-#### 2.2 Service Registry (In-Memory)
-- [ ] Creare `Services/IServiceRegistry.cs` (Interface)
-  - [ ] `Task RegisterServiceAsync(ServiceRegistration)`
-  - [ ] `Task<ServiceRegistration?> GetServiceByPrefixAsync(string prefix)`
-  - [ ] `Task<IEnumerable<ServiceRegistration>> GetAllServicesAsync()`
-  - [ ] `Task UnregisterServiceAsync(string serviceName)`
-  - [ ] `Task UpdateHealthStatusAsync(string serviceName, bool isHealthy)`
-- [ ] Implementare `Services/InMemoryServiceRegistry.cs`
-  - [ ] ConcurrentDictionary per thread-safety
-  - [ ] Prefix matching con longest-match-first (ordinamento)
-  - [ ] Health status tracking
-- [ ] Implementare `Services/ServiceHealthMonitor.cs` (Background Service)
-  - [ ] Timer ogni 30s per controllare health
-  - [ ] HTTP GET a `{serviceUrl}/_health`
-  - [ ] Auto-deregister dopo 3 failed checks consecutivi
-  - [ ] Logging degli eventi
+#### 2.2 Service Registry (In-Memory) ✅
+- [x] Creare `Services/IServiceRegistry.cs` (Interface)
+  - [x] `Task RegisterServiceAsync(ServiceRegistration)`
+  - [x] `Task<ServiceRegistration?> GetServiceByPrefixAsync(string prefix)`
+  - [x] `Task<IEnumerable<ServiceRegistration>> GetAllServicesAsync()`
+  - [x] `Task UnregisterServiceAsync(string serviceName)`
+  - [x] `Task UpdateHealthStatusAsync(string serviceName, bool isHealthy)`
+  - [x] `Task<int> GetServiceCountAsync()`
+- [x] Implementare `Services/InMemoryServiceRegistry.cs`
+  - [x] ConcurrentDictionary per thread-safety
+  - [x] Prefix matching con longest-match-first (ordinamento)
+  - [x] Health status tracking
+  - [x] Logging dettagliato per registrazioni e aggiornamenti
+- [x] Implementare `Services/ServiceHealthMonitor.cs` (Background Service)
+  - [x] Timer ogni 30s per controllare health (configurabile da KleiosConstants)
+  - [x] HTTP GET a `{serviceUrl}/_health` con timeout 5s
+  - [x] Auto-deregister dopo 3 failed checks consecutivi
+  - [x] Logging degli eventi
 
-#### 2.3 WebSocket Manager
-- [ ] Creare `Services/IWebSocketManager.cs`
-  - [ ] `Task HandleWebSocketAsync(WebSocket, string serviceName)`
-  - [ ] `Task SendToServiceAsync(string serviceName, string message)`
-  - [ ] `Task BroadcastAsync(string message)`
-- [ ] Implementare `Services/WebSocketManager.cs`
-  - [ ] ConcurrentDictionary<serviceName, WebSocket>
-  - [ ] Heartbeat handler (riceve ping, risponde pong)
-  - [ ] Connection close handler → auto-deregister
-  - [ ] Message queue per send reliability
+#### 2.3 WebSocket Manager ✅
+- [x] Creare `Services/IWebSocketManager.cs`
+  - [x] `Task HandleWebSocketAsync(WebSocket, string serviceName)`
+  - [x] `Task SendToServiceAsync(string serviceName, string message)`
+  - [x] `Task BroadcastAsync(string message)`
+  - [x] `int GetActiveConnectionsCount()`
+- [x] Implementare `Services/WebSocketManager.cs`
+  - [x] ConcurrentDictionary<serviceName, WebSocket>
+  - [x] Heartbeat handler (riceve ping, risponde pong)
+  - [x] Connection close handler → auto-deregister
+  - [x] Gestione errori e disconnessioni
 
-#### 2.4 Controllers e Endpoints
-- [ ] Creare `Controllers/GatewayController.cs`
-  - [ ] `POST /api/_gateway/register` - Registrazione servizio
-    - [ ] Validazione ServiceRegistration
-    - [ ] Chiamata a ServiceRegistry.RegisterServiceAsync()
-    - [ ] Risposta 200 OK o 400 BadRequest
-  - [ ] `GET /api/_gateway/routes` - Lista route disponibili
-    - [ ] Query a ServiceRegistry.GetAllServicesAsync()
-    - [ ] Filtraggio per utente autenticato (future)
-    - [ ] Risposta JSON con route list
-  - [ ] `GET /api/_gateway/services` - Stato servizi (admin)
-    - [ ] Health status di tutti i servizi
-    - [ ] Timestamp ultima registrazione
-  - [ ] `DELETE /api/_gateway/register/{serviceName}` - Deregistrazione manuale
-- [ ] Creare `Endpoints/WebSocketEndpoint.cs`
-  - [ ] Map endpoint `/ws/{serviceName}`
-  - [ ] Upgrade HTTP a WebSocket
-  - [ ] Chiamata a WebSocketManager.HandleWebSocketAsync()
+#### 2.4 Controllers e Endpoints ✅
+- [x] Creare `Controllers/GatewayController.cs`
+  - [x] `POST /api/_gateway/register` - Registrazione servizio
+    - [x] Validazione ServiceRegistration completa
+    - [x] Chiamata a ServiceRegistry.RegisterServiceAsync()
+    - [x] Risposta 200 OK o 400 BadRequest
+  - [x] `GET /api/_gateway/routes` - Lista route disponibili
+    - [x] Query a ServiceRegistry.GetAllServicesAsync()
+    - [x] Filtro solo servizi healthy
+    - [x] Risposta JSON con route list
+  - [x] `GET /api/_gateway/services` - Stato servizi (admin)
+    - [x] Health status di tutti i servizi
+    - [x] Timestamp ultima registrazione
+    - [x] Statistiche aggregate
+  - [x] `DELETE /api/_gateway/register/{serviceName}` - Deregistrazione manuale
+- [x] Creare WebSocket Endpoint in Program.cs
+  - [x] Map endpoint `/ws/{serviceName}`
+  - [x] Upgrade HTTP a WebSocket
+  - [x] Chiamata a WebSocketManager.HandleWebSocketAsync()
 
-#### 2.5 Middleware e YARP Configuration
-- [ ] Creare `Middleware/PrefixRoutingMiddleware.cs`
-  - [ ] Intercetta request in arrivo
-  - [ ] Estrae prefix dal path (es: `/auth/Account/Login` → `/auth`)
-  - [ ] Query a ServiceRegistry per trovare target service
-  - [ ] Se trovato → forward a YARP (set destination)
-  - [ ] Se non trovato → 404 con suggerimenti
-  - [ ] **IMPORTANTE**: Non togliere il prefix dal path - il modulo se ne occupa
-- [ ] Configurare YARP in `Program.cs`
-  - [ ] Dynamic route configuration (no appsettings.json)
-  - [ ] Load balancing: round-robin se più istanze stesso servizio
-  - [ ] Timeout: 30s per request
-  - [ ] Headers forwarding: cookie, authorization
-  - [ ] **IMPORTANTE**: Preservare Path e QueryString originali
-- [ ] Implementare `Services/YarpConfigProvider.cs`
-  - [ ] IProxyConfigProvider implementation
-  - [ ] Genera configurazione YARP da ServiceRegistry
-  - [ ] Refresh automatico quando servizi cambiano
-  - [ ] Route ordering: longest prefix first
+#### 2.5 Middleware e YARP Configuration ✅
+- [x] Creare `Middleware/PrefixRoutingMiddleware.cs`
+  - [x] Intercetta request in arrivo
+  - [x] Ignora API Gateway (`/api/_gateway`)
+  - [x] Ignora WebSocket endpoints (`/ws/`)
+  - [x] Ignora static assets (`/_content/`, `.css`, `.js`)
+  - [x] Query a ServiceRegistry per trovare target service
+  - [x] Forward a YARP usando IHttpForwarder
+  - [x] Gestione errori 404 e 502
+  - [x] **IMPORTANTE**: Path preservato (modulo gestisce prefix)
+- [x] Integrare YARP in Program.cs
+  - [x] AddHttpForwarder() per forwarding dinamico
+  - [x] IHttpForwarder usato nel middleware custom
+  - [x] Headers forwarding automatico (cookie, authorization)
+- [ ] Implementare `Services/YarpConfigProvider.cs` - NOT NEEDED (soluzione più semplice con middleware custom)
 
-#### 2.6 Static Assets
-- [ ] Creare `wwwroot/` folder
-- [ ] Copiare MudBlazor assets
-  - [ ] `_content/MudBlazor/` (CSS, JS, fonts)
-- [ ] Creare `wwwroot/shared.css`
-  - [ ] Stili comuni a tutti i moduli
-  - [ ] Variabili CSS per theming
-- [ ] Configurare static file serving in Program.cs
-  - [ ] `app.UseStaticFiles()`
-  - [ ] Cache headers per performance
+#### 2.6 Static Assets ✅
+- [x] Creare `wwwroot/` folder
+- [x] Creare `wwwroot/shared.css`
+  - [x] Stili comuni a tutti i moduli
+  - [x] Variabili CSS per theming Kleios
+  - [x] Utility classes responsive
+- [x] Configurare static file serving in Program.cs
+  - [x] `app.UseStaticFiles()`
+- [ ] MudBlazor assets - AUTOMATIC (serviti automaticamente da package)
 
-#### 2.7 Program.cs Setup
-- [ ] Registrare servizi DI
-  - [ ] `AddSingleton<IServiceRegistry, InMemoryServiceRegistry>()`
-  - [ ] `AddSingleton<IWebSocketManager, WebSocketManager>()`
-  - [ ] `AddHostedService<ServiceHealthMonitor>()`
-- [ ] Configurare pipeline middleware
-  - [ ] UseHttpsRedirection
-  - [ ] UseStaticFiles
-  - [ ] UsePrefixRoutingMiddleware (custom)
-  - [ ] UseRouting
-  - [ ] MapControllers
-  - [ ] MapReverseProxy
-- [ ] Configurare logging
-  - [ ] Log registrazioni servizi
-  - [ ] Log routing decisions
-  - [ ] Log health check failures
+#### 2.7 Program.cs Setup ✅
+- [x] Registrare servizi DI
+  - [x] `AddSingleton<IServiceRegistry, InMemoryServiceRegistry>()`
+  - [x] `AddSingleton<IWebSocketManager, WebSocketManager>()` (fully qualified)
+  - [x] `AddHostedService<ServiceHealthMonitor>()`
+  - [x] `AddHttpClient()` per health checks
+  - [x] `AddHttpForwarder()` per YARP
+- [x] Configurare pipeline middleware
+  - [x] UseHttpsRedirection
+  - [x] UseStaticFiles
+  - [x] UseCors (permissivo per development)
+  - [x] UsePrefixRouting (custom middleware)
+  - [x] MapControllers
+- [x] Configurare endpoints speciali
+  - [x] WebSocket endpoint `/ws/{serviceName}`
+  - [x] Health check `/_health` per Gateway
+  - [x] Homepage `/` con statistiche
+- [x] Logging integrato (ILogger automatico)
 
 ---
 
