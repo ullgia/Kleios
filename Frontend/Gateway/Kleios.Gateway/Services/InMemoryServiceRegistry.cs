@@ -52,12 +52,35 @@ public class InMemoryServiceRegistry : IServiceRegistry
 
         // IMPORTANTE: Ordina per lunghezza del prefix (longest match first)
         // Questo garantisce che /system/Users matchi /system prima di /
+        // ATTENZIONE: StartsWith non basta - /authentication matcha /auth erroneamente
+        // Dobbiamo verificare che dopo il prefix ci sia '/' o sia la fine del path
         var matchingService = _services.Values
-            .Where(s => s.IsHealthy && routePrefix.StartsWith(s.RoutePrefix, StringComparison.OrdinalIgnoreCase))
+            .Where(s => s.IsHealthy && IsValidPrefixMatch(routePrefix, s.RoutePrefix))
             .OrderByDescending(s => s.RoutePrefix.Length)
             .FirstOrDefault();
 
         return Task.FromResult(matchingService);
+    }
+
+    /// <summary>
+    /// Verifica che il path matchi il prefix in modo corretto
+    /// </summary>
+    /// <param name="path">Path completo es: /auth/account/login</param>
+    /// <param name="prefix">Prefix registrato es: /auth</param>
+    /// <returns>True se match valido</returns>
+    private static bool IsValidPrefixMatch(string path, string prefix)
+    {
+        // Path deve iniziare con il prefix
+        if (!path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        // Se il path è esattamente il prefix, è un match valido
+        if (path.Length == prefix.Length)
+            return true;
+
+        // Se il path è più lungo, il carattere dopo il prefix DEVE essere '/'
+        // Questo previene match errati come /authentication che matcha /auth
+        return path[prefix.Length] == '/';
     }
 
     public Task<IEnumerable<ServiceRegistration>> GetAllServicesAsync()
