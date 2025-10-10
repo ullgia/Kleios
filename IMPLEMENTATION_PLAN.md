@@ -271,13 +271,42 @@ app.Use((context, next) =>
   - [x] UseHttpsRedirection
   - [x] UseStaticFiles
   - [x] UseCors (permissivo per development)
-  - [x] UsePrefixRouting (custom middleware)
-  - [x] MapControllers
+  - [x] **UseWebSockets()** - ⚠️ OBBLIGATORIO per supporto WebSocket
+  - [x] MapControllers (PRIMA di UsePrefixRouting)
+  - [x] Map WebSocket endpoint `/ws/{serviceName}` (PRIMA di UsePrefixRouting)
+  - [x] UsePrefixRouting (custom middleware) - ULTIMO
 - [x] Configurare endpoints speciali
   - [x] WebSocket endpoint `/ws/{serviceName}`
   - [x] Health check `/_health` per Gateway
   - [x] Homepage `/` con statistiche
 - [x] Logging integrato (ILogger automatico)
+
+**⚠️ ORDINE MIDDLEWARE CRITICO:**
+```csharp
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+app.UseCors();
+app.UseWebSockets();              // ← DEVE essere qui
+app.MapControllers();             // ← Controllers PRIMA
+app.Map("/ws/{serviceName}", ...); // ← WebSocket PRIMA
+app.UsePrefixRouting();           // ← Routing custom ULTIMO
+```
+**MOTIVO**: UsePrefixRouting intercetta tutte le richieste non matchate dagli endpoint precedenti. Se WebSocket viene dopo, non riceve mai le richieste.
+
+#### 2.8 Fix WebSocket 400 Error (10 Gennaio 2025) ✅
+**Problema**: WebSocket riceveva errore 400 "Bad Request" invece di 101 "Switching Protocols"
+
+**Root Cause**: 
+1. ❌ Mancava `app.UseWebSockets()` - necessario per abilitare supporto WebSocket in ASP.NET Core
+2. ❌ WebSocket endpoint definito DOPO `UsePrefixRouting()` - veniva intercettato dal middleware di routing prima di processare l'upgrade
+
+**Soluzione**:
+- [x] Aggiunto `app.UseWebSockets()` dopo `UseCors()` e prima di tutti gli endpoint
+- [x] Spostato `app.Map("/ws/{serviceName}", ...)` PRIMA di `UsePrefixRouting()`
+- [x] Spostato `app.MapControllers()` PRIMA di `UsePrefixRouting()`
+- [x] Confermato che `PrefixRoutingMiddleware` ignora correttamente `/ws/` paths
+
+**Risultato**: WebSocket connessioni ora accettate correttamente con status 101
 
 ---
 
