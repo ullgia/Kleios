@@ -22,15 +22,23 @@ public class PathRewriteMiddleware
         // Se il path inizia con il prefisso, rimuovilo
         if (path.StartsWith(_prefix, StringComparison.OrdinalIgnoreCase))
         {
-            var newPath = path.Substring(_prefix.Length);
+            var remainder = path.Substring(_prefix.Length);
             
-            // Se il nuovo path è vuoto, imposta "/"
-            if (string.IsNullOrEmpty(newPath))
+            // Se il remainder è vuoto, imposta "/"
+            if (string.IsNullOrEmpty(remainder) || remainder == "/")
             {
-                newPath = "/";
+                remainder = "/";
             }
             
-            context.Request.Path = newPath;
+            // IMPORTANTE: Imposta PathBase per Blazor routing
+            context.Request.PathBase = _prefix;
+            context.Request.Path = remainder;
+            
+            // Log per debugging
+            var logger = context.RequestServices.GetRequiredService<ILogger<PathRewriteMiddleware>>();
+            logger.LogDebug(
+                "Path rewrite: {OriginalPath} → PathBase: {PathBase}, Path: {NewPath}",
+                path, context.Request.PathBase, context.Request.Path);
         }
 
         await _next(context);

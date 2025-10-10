@@ -50,6 +50,17 @@ public class InMemoryServiceRegistry : IServiceRegistry
         if (string.IsNullOrEmpty(routePrefix))
             return Task.FromResult<ServiceRegistration?>(null);
 
+        _logger.LogDebug("Ricerca servizio per path: {Path}", routePrefix);
+        
+        // Debug: Log tutti i servizi disponibili
+        foreach (var svc in _services.Values)
+        {
+            var match = IsValidPrefixMatch(routePrefix, svc.RoutePrefix);
+            _logger.LogDebug(
+                "  Servizio: {ServiceName}, Prefix: {RoutePrefix}, Healthy: {IsHealthy}, Match: {Match}",
+                svc.ServiceName, svc.RoutePrefix, svc.IsHealthy, match);
+        }
+
         // IMPORTANTE: Ordina per lunghezza del prefix (longest match first)
         // Questo garantisce che /system/Users matchi /system prima di /
         // ATTENZIONE: StartsWith non basta - /authentication matcha /auth erroneamente
@@ -58,6 +69,17 @@ public class InMemoryServiceRegistry : IServiceRegistry
             .Where(s => s.IsHealthy && IsValidPrefixMatch(routePrefix, s.RoutePrefix))
             .OrderByDescending(s => s.RoutePrefix.Length)
             .FirstOrDefault();
+
+        if (matchingService != null)
+        {
+            _logger.LogInformation(
+                "Servizio trovato: {ServiceName} per path {Path}",
+                matchingService.ServiceName, routePrefix);
+        }
+        else
+        {
+            _logger.LogWarning("Nessun servizio trovato per path: {Path}", routePrefix);
+        }
 
         return Task.FromResult(matchingService);
     }
