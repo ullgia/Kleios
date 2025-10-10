@@ -102,42 +102,42 @@ app.Use((context, next) =>
   - [x] `Microsoft.Extensions.Logging.Abstractions`
   - [x] `Microsoft.Extensions.Http`
 
-#### 1.2 Kleios.Frontend.Infrastructure (Authentication e Services)
-- [ ] Creare progetto Class Library
-  - [ ] `dotnet new classlib -n Kleios.Frontend.Infrastructure -f net9.0`
-- [ ] Implementare `Authentication/CookieAuthenticationExtensions.cs`
-  - [ ] Extension method `AddKleiosCookieAuthentication()`
-  - [ ] Configurazione unificata cookie (name, domain, expiration, paths)
-  - [ ] Supporto per Development (domain: null) e Production (domain: configurabile)
-  - [ ] LoginPath, LogoutPath, AccessDeniedPath da KleiosConstants
-- [ ] Implementare `Authentication/ServerCookieAuthenticationStateProvider.cs`
-  - [ ] Custom AuthenticationStateProvider
-  - [ ] Legge cookie HttpContext
-  - [ ] Parsing JWT claims per creare ClaimsPrincipal
-  - [ ] Cache dei claims con FusionCache (optional)
-- [ ] Implementare `Services/IAuthenticationService.cs`
-  - [ ] `Task<Result<LoginResponse>> LoginAsync(LoginRequest)`
-  - [ ] `Task<Result> LogoutAsync()`
-  - [ ] `Task<Result<UserInfo>> GetCurrentUserAsync()`
-  - [ ] `Task<Result<bool>> ValidateTokenAsync()`
-- [ ] Implementare `Services/AuthenticationService.cs`
-  - [ ] HttpClient per chiamare Backend Auth API
-  - [ ] JWT parsing e validazione
-  - [ ] Cookie management (set/clear)
-  - [ ] Error handling e retry logic
-- [ ] Implementare `Authorization/KleiosPolicyProvider.cs`
+#### 1.2 Kleios.Frontend.Infrastructure (Authentication e Services) ✅
+- [x] Creare progetto Class Library
+  - [x] `dotnet new classlib -n Kleios.Frontend.Infrastructure -f net9.0`
+- [x] Implementare `Authentication/CookieAuthenticationExtensions.cs`
+  - [x] Extension method `AddKleiosCookieAuthentication()`
+  - [x] Configurazione unificata cookie (name, domain, expiration, paths)
+  - [x] Supporto per Development (domain: null) e Production (domain: configurabile)
+  - [x] LoginPath, LogoutPath, AccessDeniedPath da KleiosConstants
+- [x] Implementare `Authentication/ServerCookieAuthenticationStateProvider.cs`
+  - [x] Custom AuthenticationStateProvider
+  - [x] Legge cookie HttpContext
+  - [x] Parsing JWT claims per creare ClaimsPrincipal
+  - [ ] Cache dei claims con FusionCache (optional) - FUTURE
+- [x] Implementare `Services/IAuthenticationService.cs`
+  - [x] `Task<Option<LoginResponse>> LoginAsync(LoginRequest)`
+  - [x] `Task<Option> LogoutAsync()`
+  - [x] `Task<Option<UserInfo>> GetCurrentUserAsync()`
+  - [x] `Task<Option<bool>> ValidateTokenAsync()`
+- [x] Implementare `Services/AuthenticationService.cs`
+  - [x] HttpClient per chiamare Backend Auth API
+  - [x] JWT parsing e validazione
+  - [x] Cookie management (set/clear)
+  - [x] Error handling e retry logic
+- [ ] Implementare `Authorization/KleiosPolicyProvider.cs` - FUTURE (non essenziale per MVP)
   - [ ] Custom IAuthorizationPolicyProvider
   - [ ] Politiche dinamiche basate su permessi
   - [ ] Cache policies per performance
-- [ ] Implementare `Services/ServiceCollectionExtensions.cs`
-  - [ ] Extension method `AddKleiosInfrastructure()`
-  - [ ] Registra tutti i servizi (Auth, HttpClient, etc.)
-  - [ ] Configura authorization policies
-- [ ] Aggiungere package references
-  - [ ] `Microsoft.AspNetCore.Authentication.Cookies`
-  - [ ] `Microsoft.AspNetCore.Components.Authorization`
-  - [ ] `System.IdentityModel.Tokens.Jwt`
-  - [ ] `ZiggyCreatures.FusionCache` (optional per cache)
+- [x] Implementare `Services/ServiceCollectionExtensions.cs`
+  - [x] Extension method `AddKleiosInfrastructure()`
+  - [x] Registra tutti i servizi (Auth, HttpClient, etc.)
+  - [ ] Configura authorization policies - FUTURE
+- [x] Aggiungere package references
+  - [x] `Microsoft.AspNetCore.Authentication.Cookies`
+  - [x] `Microsoft.AspNetCore.Components.Authorization`
+  - [x] `System.IdentityModel.Tokens.Jwt`
+  - [ ] `ZiggyCreatures.FusionCache` (optional per cache) - FUTURE
 
 #### 1.3 Kleios.Frontend.Components (Layout e UI Condivisi)
 - [ ] Creare progetto Razor Class Library
