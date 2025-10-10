@@ -281,88 +281,118 @@ app.Use((context, next) =>
 
 ---
 
-### FASE 3: Modulo Auth (Primo Modulo)
+### FASE 3: Modulo Auth (Primo Modulo) ✅
 
-#### 3.1 Kleios.Module.Auth - Progetto Base
-- [ ] Creare progetto Blazor Web App
-  - [ ] `dotnet new blazor -n Kleios.Module.Auth -f net9.0 --interactivity None`
-- [ ] Aggiungere project references
-  - [ ] Kleios.Frontend.Shared
-  - [ ] Kleios.Frontend.Infrastructure (per authentication)
-  - [ ] Kleios.Frontend.Components
-  - [ ] Kleios.Shared (per KleiosConstants)
-- [ ] Aggiungere package references
-  - [ ] `MudBlazor`
+#### 3.1 Kleios.Module.Auth - Progetto Base ✅
+- [x] Creare progetto Blazor Web App
+  - [x] `dotnet new blazor -n Kleios.Module.Auth -f net9.0 --interactivity None`
+- [x] Aggiungere project references
+  - [x] Kleios.Frontend.Shared
+  - [x] Kleios.Frontend.Infrastructure (per authentication)
+  - [x] Kleios.Frontend.Components
+  - [x] Kleios.Shared (per KleiosConstants)
+- [x] Aggiungere package references
+  - [x] `MudBlazor` (8.13.0)
 
-#### 3.2 Identity e Authentication
-- [ ] Configurare authentication in Program.cs
-  - [ ] Chiamare `services.AddKleiosCookieAuthentication(isDevelopment, productionDomain)`
-  - [ ] Chiamare `services.AddKleiosInfrastructure(configuration)`
-  - [ ] `services.AddCascadingAuthenticationState()`
-  - [ ] `services.AddScoped<AuthenticationStateProvider, ServerCookieAuthenticationStateProvider>()`
-- [ ] Configurare authorization
-  - [ ] `services.AddAuthorization()`
-  - [ ] Registrare custom policies se necessario
+#### 3.2 Identity e Authentication ✅
+- [x] Configurare authentication in Program.cs
+  - [x] Chiamare `services.AddKleiosCookieAuthentication(isDevelopment, productionDomain)`
+  - [x] Chiamare `services.AddKleiosInfrastructure(configuration)`
+  - [x] `services.AddCascadingAuthenticationState()`
+  - [x] `services.AddScoped<AuthenticationStateProvider, ServerCookieAuthenticationStateProvider>()` (automatico in AddKleiosInfrastructure)
+- [x] Configurare authorization
+  - [x] `app.UseAuthentication()` e `app.UseAuthorization()`
 
-#### 3.3 Pages
-- [ ] Creare `Components/Pages/Account/Login.razor`
-  - [ ] `@page "/auth/Account/Login"`
-  - [ ] `@attribute [AllowAnonymous]`
-  - [ ] Inject `IAuthenticationService` (da Infrastructure)
-  - [ ] MudForm con email + password
-  - [ ] Query parameter `returnUrl`
-  - [ ] OnValidSubmit → AuthenticationService.LoginAsync()
-  - [ ] Se success → JWT automaticamente in cookie + redirect a returnUrl
-  - [ ] Se error → MudAlert con messaggio
-- [ ] Creare `Components/Pages/Account/Register.razor`
-  - [ ] `@page "/auth/Account/Register"`
-  - [ ] `@attribute [AllowAnonymous]`
-  - [ ] Form con email, password, confirmPassword
-  - [ ] Validazione client-side
-  - [ ] POST a Backend per registrazione
-- [ ] Creare `Components/Pages/Account/Logout.razor`
-  - [ ] `@page "/auth/Account/Logout"`
-  - [ ] OnInitializedAsync → Clear cookie + redirect
-- [ ] Creare `Components/Pages/Account/ForgotPassword.razor`
-  - [ ] `@page "/auth/Account/ForgotPassword"`
-  - [ ] Form per richiedere reset password
+#### 3.3 Pages ✅
+- [x] Creare `Components/Pages/Account/Login.razor`
+  - [x] `@page "/Account/Login"` (path relativo dopo rewrite)
+  - [x] `@attribute [AllowAnonymous]`
+  - [x] Inject `IAuthenticationService` (da Infrastructure)
+  - [x] MudForm con email + password + RememberMe checkbox
+  - [x] Query parameter `returnUrl`
+  - [x] OnValidSubmit → AuthenticationService.LoginAsync()
+  - [x] Se success → Redirect a returnUrl o "/"
+  - [x] Se error → MudAlert con messaggio
+  - [x] Loading state con MudProgressCircular
+- [x] Creare `Components/Pages/Account/Register.razor`
+  - [x] `@page "/Account/Register"`
+  - [x] `@attribute [AllowAnonymous]`
+  - [x] Form con email, password, confirmPassword
+  - [x] Validazione client-side con IValidatableObject
+  - [x] TODO: RegisterAsync non implementato nel backend (placeholder)
+- [x] Creare `Components/Pages/Account/Logout.razor`
+  - [x] `@page "/Account/Logout"`
+  - [x] OnInitializedAsync → AuthService.LogoutAsync() + redirect al login
+  - [x] Loading UI con MudProgressCircular
+- [x] Creare `Components/Pages/Account/ForgotPassword.razor`
+  - [x] `@page "/Account/ForgotPassword"`
+  - [x] Form per richiedere reset password (placeholder)
 
-#### 3.4 App.razor e Routes
-- [ ] Modificare `Components/App.razor`
-  - [ ] `<base href="/auth/" />`
-  - [ ] Link a MudBlazor CSS/JS dal Gateway
-    - [ ] `<link href="{GATEWAY_URL}/_content/MudBlazor/MudBlazor.min.css" />`
-  - [ ] Link a shared.css dal Gateway
-  - [ ] Link a CSS locale del modulo
-  - [ ] **IMPORTANTE**: {GATEWAY_URL} viene da Configuration["GatewayUrl"]
-- [ ] Creare `Components/Routes.razor`
-  - [ ] Router con AppAssembly
-  - [ ] AuthorizeRouteView con MainLayout (da Kleios.Frontend.Components)
-  - [ ] NotAuthorized → RedirectToLogin
-  - [ ] NotFound → controllo prefix (se non `/auth` redirect a Gateway)
-  - [ ] **ATTENZIONE**: Usare `NavigationManager.NavigateTo(url, forceLoad: true)` per cambio modulo
+#### 3.4 App.razor e Routes ✅
+- [x] Modificare `Components/App.razor`
+  - [x] `<base href="/auth/" />`
+  - [x] Link a MudBlazor CSS/JS (_content/MudBlazor)
+  - [x] Link a shared.css dal Gateway (https://localhost:5000/shared.css)
+  - [x] Link a CSS locale del modulo
+- [x] Creare `Components/Routes.razor`
+  - [x] CascadingAuthenticationState wrapper
+  - [x] Router con AppAssembly
+  - [x] AuthorizeRouteView con MainLayout (da Kleios.Frontend.Components)
+  - [x] NotAuthorized → RedirectToLogin component
+  - [x] NotFound → PageTitle + LayoutView con messaggio
 
-#### 3.5 Gateway Registration
-- [ ] Implementare `Services/AuthModuleRegistration.cs` (BackgroundService)
-  - [ ] OnStarted → Chiama GatewayConnectionClient.RegisterAsync()
-  - [ ] ServiceRegistration data:
-    - [ ] ServiceName: "auth-module"
-    - [ ] RoutePrefix: "/auth"
-    - [ ] BaseUrl: da Configuration o Aspire
-    - [ ] HealthCheckEndpoint: "/_health"
-  - [ ] Connessione WebSocket per heartbeat
-  - [ ] Gestione disconnessioni con retry
-- [ ] Creare endpoint `/_health`
-  - [ ] `app.MapGet("/_health", () => Results.Ok(new { status = "healthy" }))`
+#### 3.5 Gateway Registration ✅
+- [x] Implementare `Services/AuthModuleRegistration.cs` (BackgroundService)
+  - [x] Delay di 5s prima della registrazione (aspetta Gateway startup)
+  - [x] Chiama GatewayConnectionClient.RegisterAsync()
+  - [x] ServiceRegistration data:
+    - [x] ServiceName: "auth-module"
+    - [x] RoutePrefix: "/auth"
+    - [x] BaseUrl: da Configuration (ModuleUrl)
+    - [x] HealthCheckEndpoint: "/_health"
+  - [x] Connessione WebSocket per heartbeat
+  - [x] Gestione disconnessione in StopAsync (Dispose client)
+- [x] Creare endpoint `/_health`
+  - [x] `app.MapGet("/_health", () => Results.Ok(new { status = "healthy", service = "auth-module", timestamp }))`
 
-#### 3.6 Configuration
-- [ ] `appsettings.json`
-  - [ ] Gateway URL (per development: https://localhost:5000)
-  - [ ] Backend URL (Aspire: https+http://auth-backend)
-  - [ ] Cookie domain (null per dev)
-- [ ] `appsettings.Development.json`
-  - [ ] Gateway URL: https://localhost:5000
-  - [ ] Logging: Information level
+#### 3.6 Configuration ✅
+- [x] `appsettings.json`
+  - [x] GatewayUrl: https://localhost:5000
+  - [x] ModuleUrl: https://localhost:5001
+  - [x] BackendUrl: https://localhost:7000
+- [x] `appsettings.Development.json`
+  - [x] Same URLs (Aspire override in futuro)
+
+#### 3.7 Middleware ✅
+- [x] Implementare `Middleware/PathRewriteMiddleware.cs`
+  - [x] Rimuove prefisso /auth dai path in ingresso
+  - [x] Gateway inoltra con prefisso, middleware lo rimuove per gestione locale
+  - [x] Extension method UsePathRewrite(string prefix)
+- [x] Configurare in Program.cs
+  - [x] `app.UsePathRewrite("/auth")` PRIMA di UseAuthentication
+
+#### 3.8 Build e Test ✅
+- [x] Compilazione riuscita senza errori
+- [x] 68 file creati, 60799 insertions
+- [x] Commit: 249b390
+- [x] Merge a main con --no-ff
+- [x] Branch feature/fase-3-module-auth eliminato
+
+**NOTE IMPLEMENTATIVE:**
+- Option<T> usa `IsSuccess` property, non `IsSome`
+- GatewayConnectionClient richiede HttpClient + ILogger nel costruttore
+- PathRewriteMiddleware essenziale per path routing
+- _Imports.razor deve includere: Microsoft.AspNetCore.Authorization, Microsoft.AspNetCore.Components.Authorization, Kleios.Frontend.Components.App
+- RedirectToLogin component in Kleios.Frontend.Components.App namespace
+
+**TESTING NECESSARIO (FASE 3 completa):**
+- [ ] Avviare Gateway su porta 5000
+- [ ] Avviare Auth Module su porta 5001
+- [ ] Verificare registrazione al Gateway (check /api/_gateway/routes)
+- [ ] Testare WebSocket heartbeat (ogni 30s)
+- [ ] Verificare routing da Gateway (/auth/Account/Login → Auth Module)
+- [ ] Testare path rewriting interno
+- [ ] Testare login con backend mock
 
 ---
 
