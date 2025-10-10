@@ -1,0 +1,56 @@
+/* Kleios Gateway - Shared Styles */
+
+:root {
+    --kleios-primary: #594ae2;
+    --kleios-secondary: #1ec8a5;
+    --kleios-error: #f44336;
+    --kleios-warning: #ff9800;
+    --kleios-info: #2196f3;
+    --kleios-success: #4caf50;
+}
+
+/* Global styles */
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: Roboto, sans-serif;
+}
+
+/* Utility classes */
+.kleios-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 16px;
+}
+
+.kleios-card {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    padding: 24px;
+    margin: 16px 0;
+}
+
+/* Loading spinner */
+.kleios-loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 200px;
+}
+
+/* Responsive breakpoints */
+@media (max-width: 768px) {
+    .kleios-container {
+        padding: 0 8px;
+    }
+    
+    .kleios-card {
+        padding: 16px;
+        margin: 8px 0;
+    }
+}
