@@ -21,8 +21,8 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Frontend\Gateway\Kleios.Gateway\Kleios.Gateway.csproj" />
     <ProjectReference Include="..\..\Frontend\Shell\Kleios.Frontend.Shell.csproj" />
-    <ProjectReference Include="..\..\Frontend\Modules\Kleios.Modules.Auth.Host\Kleios.Modules.Auth.Host.csproj" />
-    <ProjectReference Include="..\..\Frontend\Modules\Kleios.Modules.System.Host\Kleios.Modules.System.Host.csproj" />
+    <ProjectReference Include="..\..\Frontend\Modules\Kleios.Modules.Auth\Kleios.Modules.Auth.csproj" />
+    <ProjectReference Include="..\..\Frontend\Modules\Kleios.Modules.System\Kleios.Modules.System.csproj" />
   </ItemGroup>
 
 </Project>

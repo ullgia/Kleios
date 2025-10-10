@@ -24,6 +24,27 @@ public static class KleiosConstants
         /// Threshold in secondi prima della scadenza del token per il refresh automatico
         /// </summary>
         public const int TokenExpiryThresholdSeconds = 30;
+        
+        /// <summary>
+        /// Domain del cookie per condivisione tra moduli
+        /// Usa null per Development (localhost), imposta il dominio per Production
+        /// </summary>
+        public const string? CookieDomainDevelopment = null; // localhost non richiede domain specifico
+        
+        /// <summary>
+        /// Path di login
+        /// </summary>
+        public const string LoginPath = "/auth/Account/Login";
+        
+        /// <summary>
+        /// Path di logout
+        /// </summary>
+        public const string LogoutPath = "/auth/Account/Logout";
+        
+        /// <summary>
+        /// Path per accesso negato
+        /// </summary>
+        public const string AccessDeniedPath = "/AccessDenied";
     }
     
     /// <summary>

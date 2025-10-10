@@ -23,11 +23,11 @@ var shell = builder.AddProject<Kleios_Frontend_Shell>("shell")
     .WithReference(authBackend)
     .WithReference(systemBackend);
 
-var authModule = builder.AddProject<Kleios_Modules_Auth_Host>("auth-module")
+var authModule = builder.AddProject<Kleios_Modules_Auth>("auth-module")
     .WithHttpsEndpoint(name: "auth-module-https")
     .WithReference(authBackend);
 
-var systemModule = builder.AddProject<Kleios_Modules_System_Host>("system-module")
+var systemModule = builder.AddProject<Kleios_Modules_System>("system-module")
     .WithHttpsEndpoint(name: "system-module-https")
     .WithReference(systemBackend);
 
