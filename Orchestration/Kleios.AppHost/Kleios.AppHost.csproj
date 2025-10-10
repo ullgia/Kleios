@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 	<Sdk Name="Aspire.AppHost.Sdk" Version="9.0.0" />
 
 	<PropertyGroup>
@@ -20,9 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Frontend\Gateway\Kleios.Gateway\Kleios.Gateway.csproj" />
-    <ProjectReference Include="..\..\Frontend\Shell\Kleios.Frontend.Shell.csproj" />
-    <ProjectReference Include="..\..\Frontend\Modules\Kleios.Modules.Auth\Kleios.Modules.Auth.csproj" />
-    <ProjectReference Include="..\..\Frontend\Modules\Kleios.Modules.System\Kleios.Modules.System.csproj" />
+    <ProjectReference Include="..\..\Frontend\Modules\Kleios.Module.Auth\Kleios.Module.Auth.csproj" />
   </ItemGroup>
 
 </Project>
