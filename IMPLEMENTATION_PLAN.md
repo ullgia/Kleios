@@ -394,6 +394,88 @@ app.Use((context, next) =>
 - [ ] Testare path rewriting interno
 - [ ] Testare login con backend mock
 
+#### 3.9 Fix Aspire Service Discovery (10 Gennaio 2025) ✅
+
+**Problemi Identificati:**
+1. ❌ **InvalidOperationException**: Missing `AddAuthorization()` in Program.cs
+2. ❌ **Hardcoded URLs**: appsettings.json con URL fissi invece di Aspire Service Discovery
+3. ❌ **Code Duplication**: Layout folder duplicato (MainLayout, NavMenu) nel modulo Auth
+4. ❌ **Template Cleanup**: File template (Home, Weather, Error) non rimossi
+5. ❌ **AppHost Misconfiguration**: Riferimenti errati ai progetti backend invece dei frontend
+
+**Soluzioni Implementate:**
+- [x] **Aggiunto `AddAuthorization()` in Program.cs** → Risolve InvalidOperationException
+- [x] **Implementato Aspire Service Discovery**:
+  - [x] Aggiunto package: `Microsoft.Extensions.ServiceDiscovery` (9.5.1)
+  - [x] Aggiunto package: `Microsoft.Extensions.Http.Resilience` (9.9.0)
+  - [x] Chiamata `services.AddServiceDiscovery()` in Program.cs
+  - [x] Configurato `ConfigureHttpClientDefaults` con:
+    - [x] `AddStandardResilienceHandler()` - Retry automatici e circuit breaker
+    - [x] `AddServiceDiscovery()` - Risoluzione automatica servizi
+  - [x] Cambiato `backendUrl` da `"https://localhost:7000"` a `"https+http://auth-backend"`
+    - ℹ️ Formato Aspire: `https+http://` indica risoluzione automatica con fallback HTTP
+- [x] **Rimossi Layout duplicati**: Eliminata cartella `Components/Layout/`
+  - [x] MainLayout.razor (usa quello di Kleios.Frontend.Components)
+  - [x] MainLayout.razor.css
+  - [x] NavMenu.razor (usa quello di Kleios.Frontend.Components)
+  - [x] NavMenu.razor.css
+- [x] **Rimossi template pages**: 
+  - [x] Home.razor
+  - [x] Weather.razor
+  - [x] Error.razor
+- [x] **Aggiornato `appsettings.json`**: Rimossi BackendUrl e ModuleUrl hardcoded
+  - ℹ️ GatewayUrl mantenuto come fallback per production
+- [x] **Aggiornato `AuthModuleRegistration.cs`**:
+  - [x] Injected `IHostEnvironment` per distinguere dev/production
+  - [x] ModuleUrl ottenuto dinamicamente da `configuration["urls"]` (Aspire auto-assegna la porta)
+  - [x] Fallback a appsettings per production
+- [x] **Configurato AppHost correttamente**:
+  - [x] Cambiato riferimento da `Kleios_Backend_Authentication` a `Kleios_Module_Auth`
+  - [x] Aggiunto `.WithReference(authBackend)` per iniettare service discovery
+  - [x] Commentato systemModule (non ancora implementato)
+  - [x] Gateway riferisce solo backend e moduli esistenti
+
+**Pattern Aspire Implementato:**
+```csharp
+// Program.cs - Consuming Service (Auth Module)
+builder.Services.AddServiceDiscovery();
+builder.Services.ConfigureHttpClientDefaults(http => {
+    http.AddStandardResilienceHandler();
+    http.AddServiceDiscovery();
+});
+var backendUrl = "https+http://auth-backend"; // Aspire resolves automatically
+
+// AppHost Program.cs - Service Orchestration
+var authBackend = builder.AddProject<Kleios_Backend_Authentication>("auth-backend")
+    .WithHttpsEndpoint(name: "auth-backend-https");
+
+var authModule = builder.AddProject<Kleios_Module_Auth>("auth-module")
+    .WithHttpsEndpoint(name: "auth-module-https")
+    .WithReference(authBackend); // Injects service discovery configuration
+```
+
+**Risultato:**
+- ✅ Compilazione riuscita senza errori
+- ✅ 14 file modificati, 44 insertions, 427 deletions
+- ✅ Commit: 6acd82f
+- ✅ Merge a main: fix/fase-3-aspire-integration
+- ✅ -383 righe di codice duplicato eliminate
+
+**Lezioni Apprese:**
+1. **`AddAuthorization()` è OBBLIGATORIO**: Deve essere chiamato nel Program.cs di ogni web app che usa `[Authorize]`
+   - ❌ NON può essere astratto in una class library (Infrastructure)
+   - ✅ DEVE essere nel Program.cs dell'app host
+2. **Aspire Service Discovery > Hardcoded URLs**: 
+   - In development: URL risolti dinamicamente via `.WithReference()`
+   - In production: Fallback a appsettings.json
+3. **DRY Principle**: Layout e componenti condivisi SOLO in Kleios.Frontend.Components
+4. **Template Cleanup**: Sempre rimuovere file generati dal template non necessari
+5. **Formato URL Aspire**: `"https+http://service-name"` per risoluzione automatica
+
+**Riferimenti Documentazione:**
+- [Aspire Service Discovery](https://learn.microsoft.com/en-us/dotnet/aspire/service-discovery/overview)
+- [HTTP Client Resilience](https://learn.microsoft.com/en-us/dotnet/core/resilience/)
+
 ---
 
 ### FASE 4: Modulo Home
