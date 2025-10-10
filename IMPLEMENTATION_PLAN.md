@@ -78,29 +78,29 @@ app.Use((context, next) =>
 
 ### FASE 1: Librerie Condivise e Contratti
 
-#### 1.1 Kleios.Frontend.Shared (Libreria di Contratti)
-- [ ] Creare progetto Razor Class Library
-  - [ ] `dotnet new classlib -n Kleios.Frontend.Shared -f net9.0`
-- [ ] Implementare `ServiceRegistration.cs`
+#### 1.1 Kleios.Frontend.Shared (Libreria di Contratti) ✅
+- [x] Creare progetto Razor Class Library
+  - [x] `dotnet new classlib -n Kleios.Frontend.Shared -f net9.0`
+- [x] Implementare `ServiceRegistration.cs`
   ```csharp
   - ServiceName (string)
   - RoutePrefix (string)  
   - BaseUrl (string)
   - HealthCheckEndpoint (string)
   ```
-- [ ] Implementare `GatewayConnectionClient.cs`
-  - [ ] Metodo `RegisterAsync()` - HTTP POST a Gateway
-  - [ ] Metodo `ConnectWebSocketAsync()` - Connessione persistente
-  - [ ] Metodo `SendHeartbeatAsync()` - Keep-alive ogni 30s
-  - [ ] Auto-retry logic con exponential backoff
-- [ ] Creare `KleiosConstants.cs`
-  - [ ] Cookie name: `Kleios.AuthToken`
-  - [ ] Gateway registration endpoint: `/api/_gateway/register`
-  - [ ] Health check path: `/_health`
-  - [ ] Auth paths: `/auth/Account/Login`, `/auth/Account/Logout`
-- [ ] Aggiungere package references
-  - [ ] `System.Net.WebSockets.Client`
-  - [ ] `Microsoft.Extensions.Http`
+- [x] Implementare `GatewayConnectionClient.cs`
+  - [x] Metodo `RegisterAsync()` - HTTP POST a Gateway
+  - [x] Metodo `ConnectWebSocketAsync()` - Connessione persistente
+  - [x] Metodo `SendHeartbeatAsync()` - Keep-alive ogni 30s
+  - [x] Auto-retry logic con exponential backoff
+- [x] Creare `KleiosConstants.cs`
+  - [x] Cookie name: `Kleios.AuthToken`
+  - [x] Gateway registration endpoint: `/api/_gateway/register`
+  - [x] Health check path: `/_health`
+  - [x] Auth paths: `/auth/Account/Login`, `/auth/Account/Logout`
+- [x] Aggiungere package references
+  - [x] `Microsoft.Extensions.Logging.Abstractions`
+  - [x] `Microsoft.Extensions.Http`
 
 #### 1.2 Kleios.Frontend.Infrastructure (Authentication e Services)
 - [ ] Creare progetto Class Library
