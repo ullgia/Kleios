@@ -194,6 +194,11 @@ app.Use((context, next) =>
 - [x] Implementare `Services/InMemoryServiceRegistry.cs`
   - [x] ConcurrentDictionary per thread-safety
   - [x] Prefix matching con longest-match-first (ordinamento)
+  - [x] **IsValidPrefixMatch** - Validazione corretta del prefix
+    - [x] Path deve iniziare con prefix
+    - [x] Se path più lungo, dopo prefix DEVE esserci `/`
+    - [x] Previene match errati: `/authentication` non matcha `/auth`
+    - [x] Esempi: `/auth/login` ✅ matcha `/auth`, `/authentication` ❌ non matcha `/auth`
   - [x] Health status tracking
   - [x] Logging dettagliato per registrazioni e aggiornamenti
 - [x] Implementare `Services/ServiceHealthMonitor.cs` (Background Service)
