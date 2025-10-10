@@ -55,6 +55,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Shell", "Shell", "{5B075764
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kleios.Frontend.Shell", "Frontend\Shell\Kleios.Frontend.Shell.csproj", "{735F5219-2FBF-4F3A-AA16-CCB945C3CC93}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kleios.Module.Auth", "Frontend\Modules\Kleios.Module.Auth\Kleios.Module.Auth.csproj", "{B6C98E18-CD1E-4731-9AF4-3ED5D85ED0B6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -257,6 +259,18 @@ Global
 		{735F5219-2FBF-4F3A-AA16-CCB945C3CC93}.Release|x64.Build.0 = Release|Any CPU
 		{735F5219-2FBF-4F3A-AA16-CCB945C3CC93}.Release|x86.ActiveCfg = Release|Any CPU
 		{735F5219-2FBF-4F3A-AA16-CCB945C3CC93}.Release|x86.Build.0 = Release|Any CPU
+		{B6C98E18-CD1E-4731-9AF4-3ED5D85ED0B6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B6C98E18-CD1E-4731-9AF4-3ED5D85ED0B6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B6C98E18-CD1E-4731-9AF4-3ED5D85ED0B6}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{B6C98E18-CD1E-4731-9AF4-3ED5D85ED0B6}.Debug|x64.Build.0 = Debug|Any CPU
+		{B6C98E18-CD1E-4731-9AF4-3ED5D85ED0B6}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{B6C98E18-CD1E-4731-9AF4-3ED5D85ED0B6}.Debug|x86.Build.0 = Debug|Any CPU
+		{B6C98E18-CD1E-4731-9AF4-3ED5D85ED0B6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B6C98E18-CD1E-4731-9AF4-3ED5D85ED0B6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B6C98E18-CD1E-4731-9AF4-3ED5D85ED0B6}.Release|x64.ActiveCfg = Release|Any CPU
+		{B6C98E18-CD1E-4731-9AF4-3ED5D85ED0B6}.Release|x64.Build.0 = Release|Any CPU
+		{B6C98E18-CD1E-4731-9AF4-3ED5D85ED0B6}.Release|x86.ActiveCfg = Release|Any CPU
+		{B6C98E18-CD1E-4731-9AF4-3ED5D85ED0B6}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -284,6 +298,7 @@ Global
 		{1414BADE-FF7B-4BEA-8968-D887BD9BA7C6} = {79B1B029-B648-83CF-973E-535709107082}
 		{5B075764-90A6-D4F4-15BC-624D4FBF2248} = {CE609670-85B9-0D16-FB54-ED063D5D8A6D}
 		{735F5219-2FBF-4F3A-AA16-CCB945C3CC93} = {5B075764-90A6-D4F4-15BC-624D4FBF2248}
+		{B6C98E18-CD1E-4731-9AF4-3ED5D85ED0B6} = {34EAF5CD-A7F6-467E-BA4F-B2896A9EE49A}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {37E33C99-9A8C-42ED-9D44-A6776FC76463}
