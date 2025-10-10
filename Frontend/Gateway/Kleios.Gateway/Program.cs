@@ -43,7 +43,13 @@ app.UseStaticFiles();
 // CORS
 app.UseCors();
 
-// WebSocket endpoint per heartbeat
+// ⚠️ IMPORTANTE: WebSockets DEVE essere abilitato prima di usare endpoint WebSocket
+app.UseWebSockets();
+
+// Gateway API Controllers (prima del middleware di routing custom)
+app.MapControllers();
+
+// WebSocket endpoint per heartbeat (DEVE essere PRIMA di UsePrefixRouting)
 app.Map("/ws/{serviceName}", async (HttpContext context, string serviceName, IWebSocketManager wsManager) =>
 {
     if (context.WebSockets.IsWebSocketRequest)
@@ -58,10 +64,7 @@ app.Map("/ws/{serviceName}", async (HttpContext context, string serviceName, IWe
     }
 });
 
-// Gateway API Controllers
-app.MapControllers();
-
-// Custom Prefix Routing Middleware (DEVE essere dopo UseStaticFiles e prima di MapControllers)
+// Custom Prefix Routing Middleware (DEVE essere DOPO WebSocket e Controllers)
 app.UsePrefixRouting();
 
 // Health check endpoint per il Gateway stesso
