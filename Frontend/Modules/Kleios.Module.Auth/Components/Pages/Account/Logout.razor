@@ -1,0 +1,38 @@
+@page "/Account/Logout"
+@attribute [Authorize]
+@inject IAuthenticationService AuthService
+@inject NavigationManager Navigation
+@inject ILogger<Logout> Logger
+
+<PageTitle>Logout - Kleios</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Small" Class="d-flex justify-center align-center" Style="min-height: 100vh;">
+    <MudPaper Elevation="3" Class="pa-8 text-center" Style="width: 100%; max-width: 450px;">
+        <MudProgressCircular Size="Size.Large" Indeterminate="true" />
+        <MudText Typo="Typo.h6" Class="mt-4">Disconnessione in corso...</MudText>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            Logger.LogInformation("Logging out user");
+            await AuthService.LogoutAsync();
+            
+            // Attendi un momento
+            await Task.Delay(500);
+            
+            // Redirect al login
+            Navigation.NavigateTo("/Account/Login", forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error during logout");
+            
+            // In caso di errore, redirect comunque al login
+            Navigation.NavigateTo("/Account/Login", forceLoad: true);
+        }
+    }
+}

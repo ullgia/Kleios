@@ -1,0 +1,154 @@
+@page "/Account/Login"
+@attribute [AllowAnonymous]
+@inject IAuthenticationService AuthService
+@inject NavigationManager Navigation
+@inject ILogger<Login> Logger
+
+<PageTitle>Login - Kleios</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Small" Class="d-flex justify-center align-center" Style="min-height: 100vh;">
+    <MudPaper Elevation="3" Class="pa-8" Style="width: 100%; max-width: 450px;">
+        <MudText Typo="Typo.h4" Align="Align.Center" GutterBottom="true">
+            <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Large" Class="mr-2" />
+            Kleios Login
+        </MudText>
+        
+        <MudText Typo="Typo.body2" Align="Align.Center" Class="mb-6" Color="Color.Secondary">
+            Accedi al tuo account
+        </MudText>
+
+        @if (!string.IsNullOrEmpty(_errorMessage))
+        {
+            <MudAlert Severity="Severity.Error" Class="mb-4" CloseIconClicked="@(() => _errorMessage = null)" ShowCloseIcon="true">
+                @_errorMessage
+            </MudAlert>
+        }
+
+        @if (_isSuccess)
+        {
+            <MudAlert Severity="Severity.Success" Class="mb-4">
+                Login effettuato con successo! Reindirizzamento in corso...
+            </MudAlert>
+        }
+
+        <EditForm Model="@_loginModel" OnValidSubmit="@HandleLoginAsync">
+            <DataAnnotationsValidator />
+            
+            <MudTextField Label="Email" 
+                          @bind-Value="_loginModel.Email" 
+                          For="@(() => _loginModel.Email)"
+                          Variant="Variant.Outlined" 
+                          Margin="Margin.Dense"
+                          Class="mb-4"
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Email" />
+
+            <MudTextField Label="Password" 
+                          @bind-Value="_loginModel.Password" 
+                          For="@(() => _loginModel.Password)"
+                          InputType="InputType.Password" 
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Class="mb-4"
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Lock" />
+
+            <MudCheckBox @bind-Value="_loginModel.RememberMe" Color="Color.Primary" Class="mb-4">
+                Ricordami
+            </MudCheckBox>
+
+            <MudButton ButtonType="ButtonType.Submit" 
+                       Variant="Variant.Filled" 
+                       Color="Color.Primary" 
+                       FullWidth="true"
+                       Size="Size.Large"
+                       Disabled="@_isLoading"
+                       Class="mb-3">
+                @if (_isLoading)
+                {
+                    <MudProgressCircular Class="mr-2" Size="Size.Small" Indeterminate="true" />
+                    <span>Accesso in corso...</span>
+                }
+                else
+                {
+                    <span>Accedi</span>
+                }
+            </MudButton>
+        </EditForm>
+
+        <MudDivider Class="my-4" />
+
+        <MudStack Row="true" Justify="Justify.SpaceBetween">
+            <MudLink Href="/Account/ForgotPassword" Typo="Typo.body2">Password dimenticata?</MudLink>
+            <MudLink Href="/Account/Register" Typo="Typo.body2">Registrati</MudLink>
+        </MudStack>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private LoginModel _loginModel = new();
+    private bool _isLoading;
+    private bool _isSuccess;
+    private string? _errorMessage;
+
+    [SupplyParameterFromQuery(Name = "returnUrl")]
+    public string? ReturnUrl { get; set; }
+
+    private async Task HandleLoginAsync()
+    {
+        _isLoading = true;
+        _errorMessage = null;
+        _isSuccess = false;
+
+        try
+        {
+            var request = new Kleios.Frontend.Infrastructure.Services.LoginRequest(
+                _loginModel.Email,
+                _loginModel.Password,
+                _loginModel.RememberMe
+            );
+
+            var result = await AuthService.LoginAsync(request);
+
+            if (result.IsSuccess)
+            {
+                _isSuccess = true;
+                Logger.LogInformation("Login successful for user: {Email}", _loginModel.Email);
+
+                // Attendi un momento per mostrare il messaggio di successo
+                await Task.Delay(500);
+
+                // Redirect al returnUrl o alla home
+                var redirectUrl = string.IsNullOrWhiteSpace(ReturnUrl) ? "/" : ReturnUrl;
+                Navigation.NavigateTo(redirectUrl, forceLoad: true);
+            }
+            else
+            {
+                _errorMessage = "Email o password non validi. Riprova.";
+                Logger.LogWarning("Login failed for user: {Email}", _loginModel.Email);
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = "Errore durante il login. Riprova più tardi.";
+            Logger.LogError(ex, "Error during login for user: {Email}", _loginModel.Email);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private class LoginModel
+    {
+        [Required(ErrorMessage = "L'email è obbligatoria")]
+        [EmailAddress(ErrorMessage = "Inserisci un'email valida")]
+        public string Email { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "La password è obbligatoria")]
+        [MinLength(6, ErrorMessage = "La password deve contenere almeno 6 caratteri")]
+        public string Password { get; set; } = string.Empty;
+
+        public bool RememberMe { get; set; }
+    }
+}

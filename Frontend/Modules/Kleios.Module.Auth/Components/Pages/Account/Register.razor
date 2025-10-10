@@ -1,0 +1,152 @@
+@page "/Account/Register"
+@attribute [AllowAnonymous]
+@inject IAuthenticationService AuthService
+@inject NavigationManager Navigation
+@inject ILogger<Register> Logger
+
+<PageTitle>Registrazione - Kleios</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Small" Class="d-flex justify-center align-center" Style="min-height: 100vh;">
+    <MudPaper Elevation="3" Class="pa-8" Style="width: 100%; max-width: 450px;">
+        <MudText Typo="Typo.h4" Align="Align.Center" GutterBottom="true">
+            <MudIcon Icon="@Icons.Material.Filled.PersonAdd" Size="Size.Large" Class="mr-2" />
+            Registrazione
+        </MudText>
+        
+        <MudText Typo="Typo.body2" Align="Align.Center" Class="mb-6" Color="Color.Secondary">
+            Crea il tuo account Kleios
+        </MudText>
+
+        @if (!string.IsNullOrEmpty(_errorMessage))
+        {
+            <MudAlert Severity="Severity.Error" Class="mb-4" CloseIconClicked="@(() => _errorMessage = null)" ShowCloseIcon="true">
+                @_errorMessage
+            </MudAlert>
+        }
+
+        @if (_isSuccess)
+        {
+            <MudAlert Severity="Severity.Success" Class="mb-4">
+                Registrazione completata! Reindirizzamento al login...
+            </MudAlert>
+        }
+
+        <EditForm Model="@_registerModel" OnValidSubmit="@HandleRegisterAsync">
+            <DataAnnotationsValidator />
+            
+            <MudTextField Label="Email" 
+                          @bind-Value="_registerModel.Email" 
+                          For="@(() => _registerModel.Email)"
+                          Variant="Variant.Outlined" 
+                          Margin="Margin.Dense"
+                          Class="mb-4"
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Email" />
+
+            <MudTextField Label="Password" 
+                          @bind-Value="_registerModel.Password" 
+                          For="@(() => _registerModel.Password)"
+                          InputType="InputType.Password" 
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Class="mb-4"
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Lock" />
+
+            <MudTextField Label="Conferma Password" 
+                          @bind-Value="_registerModel.ConfirmPassword" 
+                          For="@(() => _registerModel.ConfirmPassword)"
+                          InputType="InputType.Password" 
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Class="mb-4"
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Lock" />
+
+            <MudButton ButtonType="ButtonType.Submit" 
+                       Variant="Variant.Filled" 
+                       Color="Color.Primary" 
+                       FullWidth="true"
+                       Size="Size.Large"
+                       Disabled="@_isLoading"
+                       Class="mb-3">
+                @if (_isLoading)
+                {
+                    <MudProgressCircular Class="mr-2" Size="Size.Small" Indeterminate="true" />
+                    <span>Registrazione in corso...</span>
+                }
+                else
+                {
+                    <span>Registrati</span>
+                }
+            </MudButton>
+        </EditForm>
+
+        <MudDivider Class="my-4" />
+
+        <MudStack Row="true" Justify="Justify.Center">
+            <MudText Typo="Typo.body2">Hai già un account?</MudText>
+            <MudLink Href="/Account/Login" Typo="Typo.body2">Accedi</MudLink>
+        </MudStack>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private RegisterModel _registerModel = new();
+    private bool _isLoading;
+    private bool _isSuccess;
+    private string? _errorMessage;
+
+    private async Task HandleRegisterAsync()
+    {
+        _isLoading = true;
+        _errorMessage = null;
+        _isSuccess = false;
+
+        try
+        {
+            // TODO: Implementare RegisterAsync nel backend
+            Logger.LogInformation("Registration requested for user: {Email}", _registerModel.Email);
+            
+            // Simuliamo un delay
+            await Task.Delay(1000);
+            
+            // Per ora registrazione non implementata
+            _errorMessage = "La registrazione non è ancora implementata. Usa le credenziali di test per accedere.";
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = "Errore durante la registrazione. Riprova più tardi.";
+            Logger.LogError(ex, "Error during registration for user: {Email}", _registerModel.Email);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private class RegisterModel : IValidatableObject
+    {
+        [Required(ErrorMessage = "L'email è obbligatoria")]
+        [EmailAddress(ErrorMessage = "Inserisci un'email valida")]
+        public string Email { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "La password è obbligatoria")]
+        [MinLength(6, ErrorMessage = "La password deve contenere almeno 6 caratteri")]
+        public string Password { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "La conferma password è obbligatoria")]
+        public string ConfirmPassword { get; set; } = string.Empty;
+
+        public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+        {
+            if (Password != ConfirmPassword)
+            {
+                yield return new ValidationResult(
+                    "Le password non corrispondono",
+                    new[] { nameof(ConfirmPassword) }
+                );
+            }
+        }
+    }
+}
