@@ -42,6 +42,69 @@ public class PrefixRoutingMiddleware
             return;
         }
 
+        // ⚠️ CRITICO: Forward richieste Blazor SignalR (/_blazor) al modulo corretto
+        // Blazor Interactive Server usa SignalR per la comunicazione real-time
+        if (path.StartsWith("/_blazor", StringComparison.OrdinalIgnoreCase))
+        {
+            // Usa il Referer per determinare il modulo di origine
+            var referer = context.Request.Headers.Referer.ToString();
+            ServiceRegistration? targetService = null;
+
+            if (!string.IsNullOrEmpty(referer))
+            {
+                var refererUri = new Uri(referer);
+                var refererPath = refererUri.AbsolutePath;
+                targetService = await serviceRegistry.GetServiceByPrefixAsync(refererPath);
+            }
+
+            // Fallback: modulo Home per SignalR senza referer
+            if (targetService == null)
+            {
+                targetService = await serviceRegistry.GetServiceByPrefixAsync("/");
+            }
+
+            if (targetService != null)
+            {
+                _logger.LogInformation(
+                    "Forwarding Blazor SignalR {Path} → {ServiceName} ({BaseUrl}) - Referer: {Referer}",
+                    path, targetService.ServiceName, targetService.BaseUrl, referer);
+
+                // Forward con supporto WebSocket
+                var httpClient = new HttpMessageInvoker(new SocketsHttpHandler
+                {
+                    UseProxy = false,
+                    AllowAutoRedirect = false,
+                    AutomaticDecompression = System.Net.DecompressionMethods.None,
+                    UseCookies = true // ⚠️ IMPORTANTE: Mantieni cookies per autenticazione SignalR
+                });
+
+                var error = await httpForwarder.SendAsync(
+                    context,
+                    targetService.BaseUrl,
+                    httpClient,
+                    ForwarderRequestConfig.Empty);
+
+                if (error != ForwarderError.None)
+                {
+                    var errorFeature = context.GetForwarderErrorFeature();
+                    var exception = errorFeature?.Exception;
+
+                    _logger.LogError(
+                        exception,
+                        "Errore nel forwarding Blazor SignalR {Path} verso {ServiceName}: {Error}",
+                        path, targetService.ServiceName, error);
+                }
+
+                return;
+            }
+            else
+            {
+                _logger.LogWarning("Nessun servizio trovato per Blazor SignalR: {Path}", path);
+                context.Response.StatusCode = 502;
+                return;
+            }
+        }
+
         // Per gli static assets, usa il Referer header per determinare il modulo di destinazione
         // ECCEZIONE: shared.css è servito dal Gateway stesso (in wwwroot)
         var isStaticAsset = path.StartsWith("/_content/", StringComparison.OrdinalIgnoreCase) ||
