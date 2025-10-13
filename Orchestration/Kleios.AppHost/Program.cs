@@ -24,6 +24,9 @@ var authModule = builder.AddProject<Kleios_Module_Auth>("auth-module")
     .WithHttpsEndpoint(name: "auth-module-https")
     .WithReference(authBackend); // Service discovery: "https+http://auth-backend"
 
+var homeModule = builder.AddProject<Kleios_Module_Home>("home-module")
+    .WithHttpsEndpoint(name: "home-module-https");
+
 // ========================================
 // GATEWAY (YARP Reverse Proxy)
 // ========================================
@@ -34,6 +37,9 @@ var gateway = builder.AddProject<Kleios_Gateway>("gateway")
     .WithHttpsEndpoint(port: 5000, name: "gateway-https")
     .WithReference(authBackend)
     .WithReference(systemBackend)
-    .WithReference(authModule);
+    .WithReference(authModule)
+    .WithReference(homeModule)
+    ;
+
 
 builder.Build().Run();
