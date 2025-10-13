@@ -1,7 +1,7 @@
 ﻿<CascadingAuthenticationState>
     <Router AppAssembly="typeof(Program).Assembly">
         <Found Context="routeData">
-            <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(Kleios.Frontend.Components.Layout.MainLayout)">
+            <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(Kleios.Frontend.Components.Layout.AuthLayout)">
                 <NotAuthorized>
                     @if (context.User.Identity?.IsAuthenticated == false)
                     {
@@ -17,7 +17,7 @@
         </Found>
         <NotFound>
             <PageTitle>Non trovato</PageTitle>
-            <LayoutView Layout="typeof(Kleios.Frontend.Components.Layout.MainLayout)">
+            <LayoutView Layout="typeof(Kleios.Frontend.Components.Layout.AuthLayout)">
                 <p role="alert">Spiacente, non c'è nulla a questo indirizzo.</p>
             </LayoutView>
         </NotFound>

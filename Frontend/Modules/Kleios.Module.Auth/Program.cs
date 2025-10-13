@@ -22,7 +22,8 @@ builder.Services.ConfigureHttpClientDefaults(http =>
 });
 
 // Add services to the container.
-builder.Services.AddRazorComponents();
+builder.Services.AddRazorComponents()
+    .AddInteractiveServerComponents();
 
 // Add MudBlazor services
 builder.Services.AddMudServices();
@@ -63,7 +64,8 @@ app.UseAuthorization();
 app.UseAntiforgery();
 
 app.MapStaticAssets();
-app.MapRazorComponents<App>();
+app.MapRazorComponents<App>()
+    .AddInteractiveServerRenderMode();
 
 // Health check endpoint per il Gateway
 app.MapGet("/_health", () => Results.Ok(new 
