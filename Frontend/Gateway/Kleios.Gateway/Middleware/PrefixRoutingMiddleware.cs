@@ -1,4 +1,5 @@
 using Kleios.Gateway.Services;
+using Kleios.Frontend.Shared;
 using Yarp.ReverseProxy.Forwarder;
 
 namespace Kleios.Gateway.Middleware;
@@ -41,14 +42,97 @@ public class PrefixRoutingMiddleware
             return;
         }
 
-        // Ignora richieste agli static assets
-        if (path.StartsWith("/_content/", StringComparison.OrdinalIgnoreCase) ||
-            path.EndsWith(".css", StringComparison.OrdinalIgnoreCase) ||
-            path.EndsWith(".js", StringComparison.OrdinalIgnoreCase) ||
-            path.EndsWith(".map", StringComparison.OrdinalIgnoreCase))
+        // Per gli static assets, usa il Referer header per determinare il modulo di destinazione
+        // ECCEZIONE: shared.css è servito dal Gateway stesso (in wwwroot)
+        var isStaticAsset = path.StartsWith("/_content/", StringComparison.OrdinalIgnoreCase) ||
+                            path.StartsWith("/_framework/", StringComparison.OrdinalIgnoreCase) ||
+                            path.EndsWith(".css", StringComparison.OrdinalIgnoreCase) ||
+                            path.EndsWith(".js", StringComparison.OrdinalIgnoreCase) ||
+                            path.EndsWith(".map", StringComparison.OrdinalIgnoreCase) ||
+                            path.EndsWith(".png", StringComparison.OrdinalIgnoreCase) ||
+                            path.EndsWith(".ico", StringComparison.OrdinalIgnoreCase) ||
+                            path.EndsWith(".woff", StringComparison.OrdinalIgnoreCase) ||
+                            path.EndsWith(".woff2", StringComparison.OrdinalIgnoreCase);
+
+        // Se è shared.css, lascia che UseStaticFiles() lo gestisca
+        if (path.Equals("/shared.css", StringComparison.OrdinalIgnoreCase))
         {
             await _next(context);
             return;
+        }
+
+        if (isStaticAsset)
+        {
+            // Usa il Referer header per determinare il modulo di origine
+            var referer = context.Request.Headers.Referer.ToString();
+            ServiceRegistration? targetService = null;
+
+            if (!string.IsNullOrEmpty(referer))
+            {
+                var refererUri = new Uri(referer);
+                var refererPath = refererUri.AbsolutePath;
+                targetService = await serviceRegistry.GetServiceByPrefixAsync(refererPath);
+                
+                _logger.LogDebug(
+                    "Static asset {Path} - Referer: {Referer} → Path: {RefererPath} → Service: {ServiceName}",
+                    path, referer, refererPath, targetService?.ServiceName ?? "null");
+            }
+
+            // Fallback: cerca il modulo root (Home) per asset senza referer o referer non valido
+            if (targetService == null)
+            {
+                targetService = await serviceRegistry.GetServiceByPrefixAsync("/");
+                _logger.LogDebug(
+                    "Static asset {Path} - Nessun referer o servizio non trovato, usando Home module",
+                    path);
+            }
+
+            if (targetService != null)
+            {
+                _logger.LogInformation(
+                    "Forwarding static asset {Path} → {ServiceName} ({BaseUrl})",
+                    path, targetService.ServiceName, targetService.BaseUrl);
+
+                // Forward direttamente al modulo
+                var httpClient = new HttpMessageInvoker(new SocketsHttpHandler
+                {
+                    UseProxy = false,
+                    AllowAutoRedirect = false,
+                    AutomaticDecompression = System.Net.DecompressionMethods.None,
+                    UseCookies = false
+                });
+
+                var error = await httpForwarder.SendAsync(
+                    context,
+                    targetService.BaseUrl,
+                    httpClient,
+                    ForwarderRequestConfig.Empty);
+
+                if (error != ForwarderError.None)
+                {
+                    var errorFeature = context.GetForwarderErrorFeature();
+                    var exception = errorFeature?.Exception;
+
+                    _logger.LogError(
+                        exception,
+                        "Errore nel forwarding asset {Path} verso {ServiceName}: {Error}",
+                        path, targetService.ServiceName, error);
+                }
+                
+                return;
+            }
+            else
+            {
+                _logger.LogWarning("Nessun servizio trovato per static asset: {Path}", path);
+                context.Response.StatusCode = 404;
+                await context.Response.WriteAsJsonAsync(new
+                {
+                    error = "Asset not found",
+                    path = path,
+                    message = "No service available to serve this static asset"
+                });
+                return;
+            }
         }
 
         // Cerca il servizio in base al prefix

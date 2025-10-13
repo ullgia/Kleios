@@ -37,7 +37,8 @@ var app = builder.Build();
 // Configure the HTTP request pipeline
 app.UseHttpsRedirection();
 
-// Serve static files (MudBlazor assets)
+// Serve SOLO shared.css (asset condiviso tra tutti i moduli)
+// Tutti gli altri static assets vengono forwardati ai moduli
 app.UseStaticFiles();
 
 // CORS
