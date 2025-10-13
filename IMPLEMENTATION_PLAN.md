@@ -48,11 +48,29 @@ app.Use((context, next) =>
     if (context.Request.Path.StartsWithSegments("/auth", out var remainder))
     {
         context.Request.Path = remainder;
-        context.Request.PathBase = "/auth";
+        context.Request.PathBase = "/auth";  // ← CRITICO: PathBase DEVE essere impostato!
     }
     return next();
 });
 ```
+
+**⚠️ ATTENZIONE CRITICA**:
+- **PathBase** DEVE essere impostato al prefix (es. `/auth`) per permettere a Blazor Router di funzionare
+- **Path** contiene la route relativa (es. `/Account/Login`)
+- **Base Href** nell'App.razor DEVE avere trailing slash (es. `<base href="/auth/" />`)
+- Senza PathBase corretto, Blazor Router NON trova le route anche se esistono
+- Il trailing slash nel base href è obbligatorio per la corretta costruzione dei path relativi da parte di Blazor
+
+**Esempio di flow corretto**:
+1. Browser → Gateway: `https://localhost:5000/auth/Account/Login`
+2. Gateway → Auth Module: Forward request a `http://localhost:XXXX/auth/Account/Login`
+3. PathRewriteMiddleware: Imposta `PathBase = "/auth"` e `Path = "/Account/Login"`
+4. Blazor Router: Cerca route `@page "/Account/Login"` con base href `/auth/` → ✅ Match!
+
+**Problemi comuni**:
+- ❌ `PathBase = ""` → Blazor Router non trova la route
+- ❌ `<base href="/auth">` (senza trailing slash) → Path relativi costruiti male
+- ❌ `PathBase = "/auth"` ma `<base href="/">` → Mismatch tra PathBase e base href
 
 ### 🔌 WebSocket e Health Check
 - Health check DEVE rispondere entro 5s (timeout Gateway)
@@ -1529,7 +1547,216 @@ Quando implementi un nuovo modulo in futuro, segui questa checklist:
 
 ---
 
-## 📝 Note Finali per Fase 10
+## � Problemi Critici Risolti Durante l'Implementazione
+
+Questa sezione documenta i problemi più insidiosi incontrati e le soluzioni applicate per evitare che si ripresentino.
+
+### 1. WebSocket 400 Error - Middleware Ordering
+**Problema**: Gateway ritornava 400 su richieste WebSocket invece di 101 Switching Protocols.
+
+**Causa**: 
+- Mancava `app.UseWebSockets()` nel middleware pipeline
+- Middleware ordering errato: `UsePrefixRouting()` era PRIMA di `MapControllers()` e `Map("/ws/...")`
+
+**Soluzione**:
+```csharp
+// ORDINE CORRETTO in Gateway Program.cs
+app.UseHttpsRedirection();
+app.UseStaticFiles();      // Solo per shared.css
+app.UseCors();
+app.UseWebSockets();       // ← OBBLIGATORIO per WebSocket support
+app.MapControllers();      // ← PRIMA di routing custom
+app.Map("/ws/{...}");      // ← PRIMA di routing custom  
+app.UsePrefixRouting();    // ← ULTIMO middleware
+```
+
+**Lesson Learned**: ASP.NET Core middleware order è CRITICO. WebSocket deve essere abilitato PRIMA dell'endpoint routing, e i controller/endpoint WebSocket devono essere mappati PRIMA del custom routing middleware.
+
+---
+
+### 2. Prefix Matching False Positives
+**Problema**: `/authentication` veniva matchato da `/auth` prefix, causando routing errato.
+
+**Causa**: Logica di prefix matching usava solo `StartsWith()` senza controllare i boundary del path.
+
+**Soluzione**:
+```csharp
+private static bool IsValidPrefixMatch(string path, string prefix)
+{
+    if (!path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+        return false;
+    
+    // Se il path è esattamente uguale al prefix, è un match valido
+    if (path.Length == prefix.Length)
+        return true;
+    
+    // Se c'è altro dopo il prefix, deve iniziare con '/'
+    // Questo previene /authentication da matchare /auth
+    return path[prefix.Length] == '/';
+}
+```
+
+**Lesson Learned**: Path prefix matching richiede boundary checking. Non basta `StartsWith()` - serve verificare che dopo il prefix ci sia un separator (`/`) o fine stringa.
+
+---
+
+### 3. Static Assets 404 - Forwarding Mancante
+**Problema**: Browser richiedeva static assets (CSS, JS) al Gateway ma riceveva 404.
+
+**Causa**: Gateway cercava di servire gli asset dalla propria `wwwroot` ma non li aveva. Gli asset esistevano solo nei moduli.
+
+**Soluzione**:
+```csharp
+// In PrefixRoutingMiddleware - forward static assets usando Referer header
+if (isStaticAsset)
+{
+    var referer = context.Request.Headers.Referer.ToString();
+    var refererPath = new Uri(referer).AbsolutePath;
+    
+    // Determina modulo target dal Referer
+    var targetService = await serviceRegistry.GetServiceByPrefixAsync(refererPath);
+    
+    // Fallback al modulo Home se non trovato
+    if (targetService == null)
+        targetService = await serviceRegistry.GetServiceByPrefixAsync("/");
+    
+    await httpForwarder.SendAsync(context, targetService.BaseUrl, httpClient, ForwarderRequestConfig.Empty);
+    return;
+}
+```
+
+**Architecture Decision**:
+- Gateway serve SOLO `shared.css` (asset veramente condiviso)
+- Tutti gli altri asset vengono forwarded ai moduli usando Referer header per determinare il target
+- Fallback al modulo Home (`/`) se Referer mancante
+
+**Lesson Learned**: In architettura Gateway + Moduli, decidere esplicitamente quali asset sono shared (Gateway) e quali sono module-specific (forward). Non duplicare asset.
+
+---
+
+### 4. Blazor Interactive Server - SignalR Non Forwarded
+**Problema**: Blazor Interactive Server generava errore `Uncaught TypeError: e.map is not a function` quando acceduto via Gateway.
+
+**Causa**: Blazor Interactive Server usa SignalR su endpoint `/_blazor` per comunicare con il server. Gateway non forwarded questo endpoint ai moduli.
+
+**Soluzione**:
+```csharp
+// In PrefixRoutingMiddleware - forward /_blazor endpoint
+if (path.StartsWith("/_blazor", StringComparison.OrdinalIgnoreCase))
+{
+    var referer = context.Request.Headers.Referer.ToString();
+    var refererPath = new Uri(referer).AbsolutePath;
+    
+    var targetService = await serviceRegistry.GetServiceByPrefixAsync(refererPath);
+    if (targetService == null)
+        targetService = await serviceRegistry.GetServiceByPrefixAsync("/");
+    
+    // UseCookies = true per supportare autenticazione
+    var requestConfig = new ForwarderRequestConfig 
+    { 
+        ActivityTimeout = TimeSpan.FromMinutes(100),
+        Version = HttpVersion.Version11,
+        VersionPolicy = HttpVersionPolicy.RequestVersionOrLower
+    };
+    
+    var transformBuilder = context.RequestServices.GetRequiredService<ITransformBuilder>();
+    var transforms = transformBuilder.Create();
+    var httpContext = context.RequestServices.GetRequiredService<IHttpContextAccessor>().HttpContext;
+    
+    await httpForwarder.SendAsync(
+        context, 
+        targetService.BaseUrl, 
+        httpClient,
+        requestConfig,
+        transforms
+    );
+    return;
+}
+```
+
+**Lesson Learned**: Blazor Interactive Server richiede SignalR forwarding. `/_blazor` è un endpoint speciale che deve essere forwarded come WebSocket upgrade. Usare Referer header per determinare il modulo target.
+
+---
+
+### 5. PathBase Routing - Blazor Router Not Finding Routes
+**Problema**: Blazor Router non trovava route anche se esistevano (es. `@page "/Account/Login"`).
+
+**Causa**: 
+1. `PathBase` non veniva impostato correttamente nel PathRewriteMiddleware (era stringa vuota invece di `/auth`)
+2. `<base href="/auth">` mancava trailing slash (dovrebbe essere `/auth/`)
+
+**Soluzione**:
+```csharp
+// In PathRewriteMiddleware.cs
+var remainder = path.Substring(_prefix.Length);
+if (string.IsNullOrEmpty(remainder) || remainder == "/")
+{
+    remainder = "/";
+}
+
+// CRITICO: PathBase DEVE essere impostato al prefix
+context.Request.PathBase = _prefix;  // "/auth"
+context.Request.Path = remainder;     // "/Account/Login"
+```
+
+```html
+<!-- In App.razor -->
+<base href="/auth/" />  <!-- ← Trailing slash OBBLIGATORIO -->
+```
+
+**Flow corretto**:
+1. Browser → Gateway: `https://localhost:5000/auth/Account/Login`
+2. Gateway → Auth Module: Forward `http://localhost:XXXX/auth/Account/Login`
+3. PathRewriteMiddleware:
+   - `PathBase = "/auth"`
+   - `Path = "/Account/Login"`
+4. Blazor Router:
+   - Base href = `/auth/`
+   - Cerca route `@page "/Account/Login"` ✅ Match!
+
+**Lesson Learned**: 
+- Blazor Router usa `PathBase` + `Path` per matching delle route
+- `<base href>` DEVE avere trailing slash per corretta costruzione dei path relativi
+- `PathBase` deve corrispondere al `<base href>` (senza trailing slash)
+- Senza PathBase corretto, Blazor Router non trova route anche se esistono
+
+---
+
+### 6. Layout Separation - Auth vs Main Layout
+**Problema**: Tutte le pagine (incluso login) mostravano navbar e drawer, che non aveva senso per auth pages.
+
+**Causa**: Tutti i moduli usavano `MainLayout.razor` come default layout.
+
+**Soluzione**:
+1. Creato `AuthLayout.razor` - layout minimale per auth:
+```razor
+<MudLayout>
+    <MudMainContent>
+        <MudContainer MaxWidth="MaxWidth.Small" Class="d-flex align-center justify-center" Style="min-height: 100vh;">
+            @Body
+        </MudContainer>
+    </MudMainContent>
+</MudLayout>
+```
+
+2. Configurato Routes.razor nel modulo Auth:
+```razor
+<Router AppAssembly="typeof(Program).Assembly">
+    <Found Context="routeData">
+        <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(Kleios.Frontend.Components.Layout.AuthLayout)">
+```
+
+3. Mantenuto `MainLayout.razor` per Home e System modules con navbar/drawer completi.
+
+**Lesson Learned**: 
+- Layout diversi per contesti diversi migliorano UX
+- Auth pages dovrebbero essere minimali (centered form, no navbar)
+- App pages dovrebbero avere full layout (navbar, drawer, navigation)
+- Usare `DefaultLayout` in `AuthorizeRouteView` per specificare layout di default per modulo
+
+---
+
+## �📝 Note Finali per Fase 10
 
 ⚠️ **IMPORTANTE**: 
 - Non iniziare Fase 10 finché Fasi 1-9 non sono **completate, testate e stabili in produzione**
