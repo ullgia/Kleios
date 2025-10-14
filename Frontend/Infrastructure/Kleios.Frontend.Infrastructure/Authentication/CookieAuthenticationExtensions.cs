@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Http;
+using System.Threading.Tasks;
 using Kleios.Frontend.Shared;
 
 namespace Kleios.Frontend.Infrastructure.Authentication;
@@ -50,9 +52,40 @@ public static class CookieAuthenticationExtensions
                 options.SlidingExpiration = true;
 
                 // Paths per authentication
-                options.LoginPath = KleiosConstants.AuthPaths.Login;
-                options.LogoutPath = KleiosConstants.AuthPaths.Logout;
-                options.AccessDeniedPath = KleiosConstants.AuthPaths.AccessDenied;
+                // Internally the modules expose Account routes (standalone)
+                options.LoginPath = "/Account/Login";
+                options.LogoutPath = "/Account/Logout";
+                options.AccessDeniedPath = "/Account/AccessDenied";
+
+                // Override default redirect behavior so that when a module issues a challenge
+                // it redirects the client to the Gateway's auth endpoints (so auth is centralised).
+                options.Events = new CookieAuthenticationEvents
+                {
+                    OnRedirectToLogin = ctx =>
+                    {
+                        var returnUrl = Uri.EscapeDataString(ctx.Request.Path + ctx.Request.QueryString);
+                        var loginPath = KleiosConstants.AuthPaths.Login + "?returnUrl=" + returnUrl;
+                        ctx.Response.StatusCode = StatusCodes.Status302Found;
+                        ctx.Response.Headers["Location"] = loginPath;
+                        return Task.CompletedTask;
+                    },
+                    OnRedirectToAccessDenied = ctx =>
+                    {
+                        var returnUrl = Uri.EscapeDataString(ctx.Request.Path + ctx.Request.QueryString);
+                        var accessDeniedPath = KleiosConstants.AuthPaths.AccessDenied + "?returnUrl=" + returnUrl;
+                        ctx.Response.StatusCode = StatusCodes.Status302Found;
+                        ctx.Response.Headers["Location"] = accessDeniedPath;
+                        return Task.CompletedTask;
+                    },
+                    OnRedirectToLogout = ctx =>
+                    {
+                        // Logout should point to gateway logout so the cookie can be cleared centrally
+                        var logoutPath = KleiosConstants.AuthPaths.Logout;
+                        ctx.Response.StatusCode = StatusCodes.Status302Found;
+                        ctx.Response.Headers["Location"] = logoutPath;
+                        return Task.CompletedTask;
+                    }
+                };
 
                 // Return URL parameter
                 options.ReturnUrlParameter = "returnUrl";

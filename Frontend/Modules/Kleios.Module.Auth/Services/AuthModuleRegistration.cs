@@ -49,7 +49,7 @@ public class AuthModuleRegistration : BackgroundService
         var registration = new ServiceRegistration
         {
             ServiceName = "auth-module",
-            RoutePrefix = "/auth",
+            RoutePrefix = "/Account",
             BaseUrl = moduleUrl,
             HealthCheckEndpoint = "/_health",
             RegisteredAt = DateTime.UtcNow

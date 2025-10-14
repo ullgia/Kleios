@@ -56,7 +56,7 @@ if (!app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 // Path rewrite middleware - rimuove /auth dal path
-app.UsePathRewrite("/auth");
+app.UsePathRewrite("/Account");
 
 app.UseAuthentication();
 app.UseAuthorization();

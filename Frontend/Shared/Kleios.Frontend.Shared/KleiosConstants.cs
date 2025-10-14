@@ -40,11 +40,11 @@ public static class KleiosConstants
     /// </summary>
     public static class AuthPaths
     {
-        public const string Login = "/auth/Account/Login";
-        public const string Logout = "/auth/Account/Logout";
-        public const string Register = "/auth/Account/Register";
-        public const string ForgotPassword = "/auth/Account/ForgotPassword";
-        public const string AccessDenied = "/auth/Account/AccessDenied";
+        public const string Login = "/Account/Login";
+        public const string Logout = "/Account/Logout";
+        public const string Register = "/Account/Register";
+        public const string ForgotPassword = "/Account/ForgotPassword";
+        public const string AccessDenied = "/Account/AccessDenied";
     }
 
     /// <summary>

@@ -31,7 +31,7 @@ public class PathRewriteMiddleware
             }
             
             // IMPORTANTE: Imposta PathBase per Blazor routing
-            context.Request.PathBase = _prefix;
+            context.Request.PathBase = "";
             context.Request.Path = remainder;
             
             // Log per debugging
